@@ -1,0 +1,140 @@
+// The Nordic nRF52832: a 64 MHz Cortex-M4F with 512 KB of flash and 64 KB of RAM.
+// Interrupt numbers and addresses follow the nRF52832 product specification.
+
+nvic: IRQControllers.NVIC @ sysbus 0xE000E000
+    priorityMask: 0xE0
+    SystemResetRequest -> powerClock@0
+    -> cpu@0
+
+powerClock: Miscellaneous.NRF52832_PowerClock @ sysbus 0x40000000
+    gpio: gpio0
+    ram: ram
+    -> nvic@0
+
+cpu: CPU.CortexM @ sysbus
+    cpuType: "cortex-m4f"
+    nvic: nvic
+
+dwt: Miscellaneous.DWT @ sysbus 0xE0001000
+    frequency: 64000000
+
+flash: Memory.MappedMemory @ sysbus 0x0
+    size: 0x80000
+
+ram: Memory.MappedMemory @ { sysbus 0x20000000; sysbus 0x00800000 }
+    size: 0x10000
+
+ficr: Memory.MappedMemory @ sysbus 0x10000000
+    size: 0x1000
+
+uicr: Memory.MappedMemory @ sysbus 0x10001000
+    size: 0x1000
+
+radio: Wireless.NRF52840_Radio @ sysbus 0x40001000
+    -> nvic@1
+
+uart0: UART.NRF52840_UART @ sysbus 0x40002000
+    easyDMA: true
+    -> nvic@2
+
+gpiote: GPIOPort.NRF52832_GPIOTE @ sysbus 0x40006000
+    port: gpio0
+    -> nvic@6
+
+timer0: Timers.NRF52832_TIMER @ sysbus 0x40008000
+    -> nvic@8
+
+timer1: Timers.NRF52832_TIMER @ sysbus 0x40009000
+    -> nvic@9
+
+timer2: Timers.NRF52832_TIMER @ sysbus 0x4000A000
+    -> nvic@10
+
+rtc0: Timers.NRF52832_RTC @ sysbus 0x4000B000
+    numberOfCompareChannels: 3
+    -> nvic@11
+
+rng: Miscellaneous.NRF52840_RNG @ sysbus 0x4000D000
+    -> nvic@13
+
+ecb: Miscellaneous.NRF52840_ECB @ sysbus 0x4000E000
+    -> nvic@14
+
+wdt: Timers.NRF52832_Watchdog @ sysbus 0x40010000
+    powerClock: powerClock
+    -> nvic@16
+
+rtc1: Timers.NRF52832_RTC @ sysbus 0x40011000
+    numberOfCompareChannels: 4
+    -> nvic@17
+
+egu0: Miscellaneous.NRF52840_EGU @ sysbus 0x40014000
+    -> nvic@20
+
+egu1: Miscellaneous.NRF52840_EGU @ sysbus 0x40015000
+    -> nvic@21
+
+egu2: Miscellaneous.NRF52840_EGU @ sysbus 0x40016000
+    -> nvic@22
+
+egu3: Miscellaneous.NRF52840_EGU @ sysbus 0x40017000
+    -> nvic@23
+
+egu4: Miscellaneous.NRF52840_EGU @ sysbus 0x40018000
+    -> nvic@24
+
+egu5: Miscellaneous.NRF52840_EGU @ sysbus 0x40019000
+    -> nvic@25
+
+timer3: Timers.NRF52832_TIMER @ sysbus 0x4001A000
+    numberOfCompareChannels: 6
+    -> nvic@26
+
+timer4: Timers.NRF52832_TIMER @ sysbus 0x4001B000
+    numberOfCompareChannels: 6
+    -> nvic@27
+
+ppi: Miscellaneous.NRF52840_PPI @ sysbus 0x4001F000
+
+spi2: SPI.NRF52840_SPI @ sysbus 0x40023000
+    -> nvic@35
+
+rtc2: Timers.NRF52832_RTC @ sysbus 0x40024000
+    numberOfCompareChannels: 4
+    -> nvic@36
+
+gpio0: GPIOPort.NRF52832_GPIO @ sysbus 0x50000000
+
+nvmc: Miscellaneous.NRF52832_NVMC @ sysbus 0x4001E000
+    flash: flash
+    uicr: uicr
+
+errataIdentification: Memory.MappedMemory @ sysbus 0xF0000000
+    size: 0x1000
+
+saadc: Analog.NRF52832_SAADC @ sysbus 0x40007000
+    -> nvic@7
+
+temp: Miscellaneous.NRF52832_TEMP @ sysbus 0x4000C000
+    -> nvic@12
+
+ccmAar: Miscellaneous.NRF52832_CCM_AAR @ sysbus 0x4000F000
+    -> nvic@15
+
+qdec: Miscellaneous.NRF52832_QDEC @ sysbus 0x40012000
+    -> nvic@18
+
+compLpcomp: Miscellaneous.NRF52832_COMP_LPCOMP @ sysbus 0x40013000
+    -> nvic@19
+
+pwm0: Miscellaneous.NRF52832_PWM @ sysbus 0x4001C000
+    IRQ -> nvic@28
+
+mwu: Miscellaneous.NRF52832_MWU @ sysbus 0x40020000
+    -> nvic@32
+
+pwm1: Miscellaneous.NRF52832_PWM @ sysbus 0x40021000
+    IRQ -> nvic@33
+
+pwm2: Miscellaneous.NRF52832_PWM @ sysbus 0x40022000
+    IRQ -> nvic@34

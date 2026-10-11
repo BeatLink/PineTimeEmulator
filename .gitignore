@@ -1,0 +1,8 @@
+.claude/
+robot_output.xml
+log.html
+report.html
+logs/
+result
+results-*.xml
+snapshots/

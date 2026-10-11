@@ -1,0 +1,23 @@
+// A minimal machine for the serial interface tests: two shared serial blocks with test devices attached.
+
+nvic: IRQControllers.NVIC @ sysbus 0xE000E000
+    -> cpu@0
+
+cpu: CPU.CortexM @ sysbus
+    cpuType: "cortex-m4f"
+    nvic: nvic
+
+ram: Memory.MappedMemory @ sysbus 0x20000000
+    size: 0x10000
+
+spi0: SPI.NRF52832_SerialInterface @ sysbus 0x40003000
+    -> nvic@3
+
+serial1: SPI.NRF52832_SerialInterface @ sysbus 0x40004000
+    -> nvic@4
+
+spidevice: Mocks.SerialTestSpiDevice @ spi0
+
+i2cdevice: Mocks.SerialTestI2cDevice @ serial1 0x15
+
+spidevice1: Mocks.SerialTestSpiDevice @ serial1

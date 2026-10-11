@@ -1,0 +1,35 @@
+// A minimal machine for the GPIO tests: the port, GPIOTE and PPI, with test devices on a few pins.
+
+nvic: IRQControllers.NVIC @ sysbus 0xE000E000
+    -> cpu@0
+
+cpu: CPU.CortexM @ sysbus
+    cpuType: "cortex-m4f"
+    nvic: nvic
+
+ram: Memory.MappedMemory @ sysbus 0x20000000
+    size: 0x10000
+
+gpio0: GPIOPort.NRF52832_GPIO @ sysbus 0x50000000
+    boardPullUps: 0x00000020
+    init:
+        SetBoardPull 25 true
+    1 -> probe@1
+    2 -> probe@2
+    3 -> probe@3
+    5 -> probe@5
+    25 -> probe@25
+
+gpiote: GPIOPort.NRF52832_GPIOTE @ sysbus 0x40006000
+    port: gpio0
+    -> nvic@6
+
+ppi: Miscellaneous.NRF52840_PPI @ sysbus 0x4001F000
+
+probe: Mocks.GpioTestProbe @ gpio0
+
+driver: Mocks.GpioTestDriver @ gpio0
+    Line -> gpio0@10
+
+detectCounter: Mocks.GpioTestDetectCounter @ gpio0
+    port: gpio0
