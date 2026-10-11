@@ -95,3 +95,18 @@ High Frequency Clock Start Raises Its Event
     Execute Command           sysbus WriteDoubleWord 0x40000000 1
     Register Should Be        0x40000100    1
     Register Should Be        0x4000040C    0x10001
+
+Running Watchdog Keeps The Low Frequency Clock On
+    Create PineTime With An Idle Loop
+    Execute Command           sysbus WriteDoubleWord 0x40000008 1
+    Register Should Be        0x40000418    0x10000
+    Execute Command           sysbus WriteDoubleWord 0x40010504 16383
+    Execute Command           sysbus WriteDoubleWord 0x40010000 1
+    Execute Command           sysbus WriteDoubleWord 0x4000000C 1
+    Register Should Be        0x40000418    0x10000
+
+Low Frequency Clock Stops Without The Watchdog
+    Create PineTime With An Idle Loop
+    Execute Command           sysbus WriteDoubleWord 0x40000008 1
+    Execute Command           sysbus WriteDoubleWord 0x4000000C 1
+    Register Should Be        0x40000418    0

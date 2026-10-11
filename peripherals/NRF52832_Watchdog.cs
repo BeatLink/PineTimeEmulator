@@ -36,6 +36,7 @@ namespace Antmicro.Renode.Peripherals.Timers
         {
             base.Reset();
             countdown.Reset();
+            powerClock.WatchdogRunning = false;
             IRQ.Unset();
             reloadRequestsPending = 0;
             resetScheduled = false;
@@ -57,6 +58,7 @@ namespace Antmicro.Renode.Peripherals.Timers
             countdown.Value = countdown.Limit;
             reloadRequestsPending = (uint)reloadRequestsEnabled.Value;
             countdown.Enabled = true;
+            powerClock.WatchdogRunning = true;
         }
 
         private void Reload(int reloadRegister)

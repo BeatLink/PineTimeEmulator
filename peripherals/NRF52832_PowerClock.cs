@@ -34,6 +34,20 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
 
         public bool InSystemOff { get; private set; }
 
+        /// The watchdog sets this while it runs, because it keeps the 32 kHz clock on.
+        public bool WatchdogRunning
+        {
+            get => watchdogRunning;
+            set
+            {
+                watchdogRunning = value;
+                if(value)
+                {
+                    lowFrequencyClockRunning = true;
+                }
+            }
+        }
+
         // GPREGRET and RESETREAS survive every reset except a power cycle.
         public override void Reset()
         {
@@ -43,6 +57,10 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
             base.Reset();
             IRQ.Unset();
             InSystemOff = false;
+            highFrequencyClockRunning = false;
+            highFrequencyClockFromCrystal = false;
+            lowFrequencyClockRunning = watchdogRunning;
+            lowFrequencyClockSourceInUse = 0;
 
             retentionRegister.Value = kept_retention_register;
             retentionRegister2.Value = kept_retention_register_2;
@@ -140,7 +158,15 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
                 lowFrequencyClockSourceInUse = lowFrequencyClockSource.Value;
                 TriggerEvent(lowFrequencyClockStarted, Registers.LowFrequencyClockStarted);
             });
-            DefineTask(Registers.StopLowFrequencyClock, () => lowFrequencyClockRunning = false);
+            DefineTask(Registers.StopLowFrequencyClock, () =>
+            {
+                if(watchdogRunning)
+                {
+                    this.Log(LogLevel.Debug, "Ignored LFCLKSTOP: the running watchdog keeps the 32 kHz clock on");
+                    return;
+                }
+                lowFrequencyClockRunning = false;
+            });
             DefineTask(Registers.StartCalibration, () => TriggerEvent(calibrationDone, Registers.CalibrationDone));
             DefineTask(Registers.StartCalibrationTimer, () => TriggerEvent(calibrationTimerTimeout, Registers.CalibrationTimerTimeout));
             DefineTask(Registers.StopCalibrationTimer, () => { });
@@ -294,6 +320,7 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
         private const long RamBlockStride = 0x10;
 
         private uint resetReasons;
+        private bool watchdogRunning;
         private bool highFrequencyClockRunning;
         private bool highFrequencyClockFromCrystal;
         private bool lowFrequencyClockRunning;
