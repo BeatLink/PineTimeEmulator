@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # The pinetime-emulator command: the frontend/ window, wrapped with Renode, SDL2, a font and the emulator tree.
-{ pkgs, renode, infinitime_app }:
+{ pkgs, renode, infinitime_app, hci_controller }:
 
 let
   lib = pkgs.lib;
@@ -29,6 +29,7 @@ python_packages.buildPythonApplication {
     "--set-default" "PINETIME_EMULATOR_RENODE" "${renode}/bin/renode"
     "--set-default" "PINETIME_EMULATOR_ROOT" "${emulator_tree}"
     "--set-default" "PINETIME_EMULATOR_INFINITIME" "${infinitime_app}/pinetime-app-${lib.getVersion infinitime_app}.out"
+    "--set-default" "PINETIME_EMULATOR_HCI_CONTROLLER" "${hci_controller}"
     "--set-default" "PINETIME_EMULATOR_FONT" "${pkgs.dejavu_fonts}/share/fonts/truetype/DejaVuSansMono.ttf"
     "--set-default" "PYSDL2_DLL_PATH" (lib.makeLibraryPath [ pkgs.SDL2 pkgs.SDL2_ttf ])
   ];

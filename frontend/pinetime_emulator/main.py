@@ -27,6 +27,8 @@ def build_parser():
                         help="load an image into the chip; .elf/.out and .hex carry addresses, .bin needs @ADDRESS (repeatable)")
     parser.add_argument("--flash-image", metavar="FILE",
                         help="load a raw image into the 4 MB external SPI flash")
+    parser.add_argument("--bluetooth", action="store_true",
+                        help="add an emulated Bluetooth controller on a pseudo-terminal that btattach can hand to BlueZ")
     parser.add_argument("--scale", type=int, default=1, metavar="N",
                         help="draw the watch N times larger")
     parser.add_argument("--screenshot-after", nargs=2, metavar=("SECONDS", "PATH"),
@@ -93,7 +95,13 @@ def main(argv=None):
 
     root = find_root(arguments.root)
     runtime_directory = tempfile.mkdtemp(prefix="pinetime-emulator-", dir=runtime_parent())
-    emulator = Renode(root, runtime_directory, arguments.renode, arguments.verbose)
+    bluetooth = None
+    if arguments.bluetooth:
+        controller = os.environ.get("PINETIME_EMULATOR_HCI_CONTROLLER")
+        if not controller:
+            parser.error("--bluetooth needs $PINETIME_EMULATOR_HCI_CONTROLLER; run through `nix run . -- --bluetooth`")
+        bluetooth = (os.path.join(runtime_directory, "hci"), controller)
+    emulator = Renode(root, runtime_directory, arguments.renode, arguments.verbose, bluetooth)
     flash_image = str(Path(arguments.flash_image).resolve()) if arguments.flash_image else None
 
     # The window module loads SDL, so a bad command line fails fast without it.
@@ -104,6 +112,9 @@ def main(argv=None):
     previous_sigterm = signal.signal(signal.SIGTERM, lambda *_: sys.exit(1))
     try:
         emulator.start(images, flash_image)
+        if bluetooth:
+            print("pinetime-emulator: the Bluetooth controller is on", bluetooth[0])
+            print(f"pinetime-emulator: hand it to BlueZ with: sudo btattach -B {bluetooth[0]} -P h4 -S 1000000")
         window = Window(emulator, arguments.scale, headless=screenshot_after is not None)
         timeout = None if screenshot_after is None else 120 + 20 * screenshot_after
         succeeded = window.run(screenshot_after, screenshot_path, timeout)

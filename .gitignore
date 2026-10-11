@@ -6,3 +6,4 @@ logs/
 result
 results-*.xml
 snapshots/
+__pycache__/

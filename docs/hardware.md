@@ -15,7 +15,7 @@ What the emulator models, how it is wired, and what it leaves out. Each model is
 | 0x10001000 | UICR | Renode memory | Starts erased, kept across resets |
 | 0x20000000 | RAM, 64 KB | Renode memory | Random contents after `powerClock PowerCycle` |
 | 0x40000000 | POWER and CLOCK | `NRF52832_PowerClock` | RESETREAS, GPREGRET kept across resets, System OFF and GPIO wake |
-| 0x40001000 | RADIO | Renode `NRF52840_Radio` | Bluetooth LE between emulated machines |
+| 0x40001000 | RADIO | `NRF52832_RADIO` | Bit-exact event timing, TIFS turnaround, address and device matching |
 | 0x40002000 | UART | Renode `NRF52840_UART` | |
 | 0x40003000, 0x40004000 | SPI, SPIM, TWI, TWIM 0 and 1 | `NRF52832_SerialInterface` | All four modes, chosen by ENABLE, with EasyDMA |
 | 0x40006000 | GPIOTE | `NRF52832_GPIOTE` | Event and task channels, PORT event, PPI |
@@ -70,6 +70,11 @@ sysbus.serial0.spiBus.externalFlash SaveImage @flash.bin
 powerClock PowerCycle
 ```
 
+## The Bluetooth bridge
+
+`platform/bluetooth-bridge.repl` describes a second machine, an nRF52840 that runs a Bluetooth
+controller and links the watch's radio to the computer. See [bluetooth.md](bluetooth.md).
+
 ## Renode fixes
 
 Renode 1.17 decodes the Thumb-2 instruction `MOV.W Rd, SP` as illegal on Cortex-M4, which stops
@@ -78,7 +83,7 @@ which fixes it.
 
 ## Not emulated yet
 
-- Bluetooth to the computer: the radio talks only to other emulated machines.
+- Radio whitening, collisions, Coded PHY and transmit power: frames either arrive whole or not at all.
 - Timing of the CPU itself: instructions take no time beyond the clock, so speed-sensitive code
   runs faster or slower than on a watch.
 - PPI tasks run at the next time quantum, 20 µs at most, rather than at once.

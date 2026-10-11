@@ -17,6 +17,7 @@ include $root/peripherals/NRF52832_SerialInterface.cs
 include $root/peripherals/NRF52832_SAADC.cs
 include $root/peripherals/NRF52832_TEMP.cs
 include $root/peripherals/NRF52832_CCM_AAR.cs
+include $root/peripherals/NRF52832_RADIO.cs
 include $root/peripherals/NRF52832_QDEC.cs
 include $root/peripherals/NRF52832_COMP_LPCOMP.cs
 include $root/peripherals/NRF52832_PWM.cs

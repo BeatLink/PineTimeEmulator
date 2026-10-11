@@ -83,8 +83,10 @@ def quote_string(text):
 class Renode:
     """One Renode process with the watch built in it, controlled through its monitor port."""
 
-    def __init__(self, root, runtime_directory, renode_command=None, verbose=False):
+    def __init__(self, root, runtime_directory, renode_command=None, verbose=False, bluetooth=None):
         self.root = Path(root)
+        # A (pseudo-terminal path, controller firmware) pair, or None for no Bluetooth bridge.
+        self.bluetooth = bluetooth
         self.runtime_directory = Path(runtime_directory)
         self.renode_command = renode_command or os.environ.get("PINETIME_EMULATOR_RENODE") or shutil.which("renode") or "renode"
         self.verbose = verbose
@@ -124,6 +126,15 @@ class Renode:
             commands.append(load_command(path, address))
         if flash_image:
             commands.append(f"sysbus LoadBinary {quote_path(flash_image)} {EXTERNAL_FLASH_ADDRESS:#x}")
+        if self.bluetooth:
+            hci_pty, controller = self.bluetooth
+            # Monitor variables belong to the selected machine, so the bridge's are set with none selected.
+            commands += [
+                "mach clear",
+                f"$hci_pty={quote_string(hci_pty)}",
+                f"$hci_controller={quote_path(controller)}",
+                f"include {quote_path(str(self.root / 'scripts' / 'bluetooth-bridge.resc'))}",
+            ]
         commands += [
             f"{LCD} ShareFramesThrough {quote_string(str(self.frame_path))}",
             f"{BRIDGE} ShareStatusThrough {quote_string(str(self.status_path))}",

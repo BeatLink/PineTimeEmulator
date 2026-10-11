@@ -25,6 +25,7 @@
         pinetime_emulator = import ./nix/pinetime-emulator.nix {
           inherit pkgs renode;
           infinitime_app = infinitime_packages.infinitime-app;
+          hci_controller = pkgs.callPackage ./nix/hci-controller.nix { };
         };
       in
       {

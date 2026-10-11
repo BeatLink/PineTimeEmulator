@@ -31,7 +31,7 @@ ficr: Memory.MappedMemory @ sysbus 0x10000000
 uicr: Memory.MappedMemory @ sysbus 0x10001000
     size: 0x1000
 
-radio: Wireless.NRF52840_Radio @ sysbus 0x40001000
+radio: Wireless.NRF52832_RADIO @ sysbus 0x40001000
     -> nvic@1
 
 uart0: UART.NRF52840_UART @ sysbus 0x40002000

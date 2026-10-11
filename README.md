@@ -8,7 +8,8 @@ bootloaders and Nordic's SoftDevice.
 ## Status
 
 Work in progress. The MBR, wasp-os bootloader and SoftDevice already start; the rest of the
-watch is being added. See [docs/hardware.md](docs/hardware.md) for what is emulated.
+watch is being added. See [docs/hardware.md](docs/hardware.md) for what is emulated and [docs/bluetooth.md](docs/bluetooth.md) for
+reaching the computer's Bluetooth.
 
 ## Running it
 
