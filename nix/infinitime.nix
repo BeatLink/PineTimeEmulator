@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
 # InfiniTime firmware images for the PineTime, built from a pinned release.
 { pkgs, infinitime_source }:
 

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
 // A minimal machine for the GPIO tests: the port, GPIOTE and PPI, with test devices on a few pins.
 
 nvic: IRQControllers.NVIC @ sysbus 0xE000E000

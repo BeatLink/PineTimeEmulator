@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
 """The desktop window: the drawn watch showing Renode's screen, mouse and keys as inputs, and a side panel of controls."""
 
 import ctypes

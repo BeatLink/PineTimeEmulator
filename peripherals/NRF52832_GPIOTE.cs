@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
 // The nRF52832's GPIO tasks and events: eight channels that watch or drive one pin each, plus the PORT event from the port's DETECT signal.
 
 using System;

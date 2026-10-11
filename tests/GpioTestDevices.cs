@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
 // Test-only devices for the GPIO tests: a probe that records pin levels, a driver that pushes a level in, and a DETECT counter.
 
 using Antmicro.Renode.Core;

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
 """Runs pinetime-emulator headless on InfiniTime and checks the saved window shows the drawn watch with a lit screen.
 
 Needs `pinetime-emulator` on PATH with its InfiniTime build, as `nix develop` provides; it is skipped otherwise.

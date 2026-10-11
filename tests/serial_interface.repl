@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
 // A minimal machine for the serial interface tests: two shared serial blocks with test devices attached.
 
 nvic: IRQControllers.NVIC @ sysbus 0xE000E000

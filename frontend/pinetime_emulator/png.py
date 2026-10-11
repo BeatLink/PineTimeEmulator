@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
 """A small PNG writer and reader for 8-bit RGB images, so screenshots need nothing beyond the standard library."""
 
 import struct

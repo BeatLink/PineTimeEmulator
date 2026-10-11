@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
 // The nRF52832's shared CCM and AAR block: Bluetooth LE packet encryption (AES-CCM) and resolvable private address resolution.
 
 using System;

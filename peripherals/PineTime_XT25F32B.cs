@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
 // The PineTime's 4 MB XTX XT25F32B SPI NOR flash, with its erase and program timing.
 
 using System;

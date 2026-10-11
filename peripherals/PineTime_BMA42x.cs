@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
 // The PineTime's Bosch BMA421 or BMA425 accelerometer: config file upload, 12-bit acceleration, a step counter and two interrupt pins.
 
 using System;

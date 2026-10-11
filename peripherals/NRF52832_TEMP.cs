@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
 // The nRF52832's die temperature sensor: each measurement reports the temperature set from the monitor, in quarter degrees.
 
 using System;

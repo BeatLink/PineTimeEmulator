@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
 // The Nordic nRF52832: a 64 MHz Cortex-M4F with 512 KB of flash and 64 KB of RAM.
 // Interrupt numbers and addresses follow the nRF52832 product specification.
 

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
 // The nRF52832's memory watch unit: its region, enable and event registers read back, but no memory access is watched.
 
 using System;

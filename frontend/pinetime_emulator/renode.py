@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
 """Starts Renode as a child process and drives its monitor over a TCP socket."""
 
 import os

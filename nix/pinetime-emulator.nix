@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
 # The pinetime-emulator command: the frontend/ window, wrapped with Renode, SDL2, a font and the emulator tree.
 { pkgs, renode, infinitime_app }:
 
@@ -37,5 +38,6 @@ python_packages.buildPythonApplication {
   meta = {
     description = "A desktop window onto the Renode PineTime emulator";
     mainProgram = "pinetime-emulator";
+    license = lib.licenses.gpl3Plus;
   };
 }

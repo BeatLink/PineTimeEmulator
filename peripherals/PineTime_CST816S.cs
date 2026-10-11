@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
 // The PineTime's Hynitron CST816S touch panel: one finger, gestures, an active-low interrupt line and a reset pin.
 
 using System;

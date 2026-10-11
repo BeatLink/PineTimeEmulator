@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
 // The nRF52832's flash controller: it is always ready, and erases pages of flash and UICR to 0xFF.
 
 using Antmicro.Renode.Core;

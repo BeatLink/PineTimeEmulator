@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
 // The nRF52832 watchdog: once started it cannot be stopped, and it resets the chip unless every enabled reload register is written in time.
 
 using System;

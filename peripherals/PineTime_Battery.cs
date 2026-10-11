@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
 // The PineTime's battery and charger: the cell voltage reaches AIN7 through a /2 divider, P0.19 goes low while powered and P0.12 low while charging.
 
 using System;

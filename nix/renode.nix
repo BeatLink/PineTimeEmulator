@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
 # Renode from nixpkgs with the fixes the PineTime emulator needs.
 { renode }:
 

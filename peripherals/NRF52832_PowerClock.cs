@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
 // The nRF52832's POWER and CLOCK blocks, which share 0x40000000 and one interrupt.
 
 using System;

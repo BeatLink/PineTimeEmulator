@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
 // The nRF52832's shared comparator and low-power comparator: register storage, a READY event on START, and a result set from the monitor.
 
 using System;

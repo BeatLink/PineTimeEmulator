@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
 // The PineTime: an nRF52832 plus the parts wired to it, on the pins of the PineTime schematic.
 
 using "nrf52832.repl"

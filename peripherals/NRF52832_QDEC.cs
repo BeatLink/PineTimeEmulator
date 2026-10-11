@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
 // The nRF52832's quadrature decoder: register storage with reset values; no rotation is ever reported.
 
 using System;

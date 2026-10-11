@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
 // The PineTime's 240x240 screen and its Sitronix ST7789 controller, fed over SPI with separate data/command, reset and backlight pins.
 
 using System;

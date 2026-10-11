@@ -1,5 +1,6 @@
 :name: PineTime window
 :description: Builds the PineTime and adds the bridge that shares its outputs with the desktop window (frontend/).
+# SPDX-License-Identifier: GPL-3.0-or-later
 
 $root?=$ORIGIN/..
 

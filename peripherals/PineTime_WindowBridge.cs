@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
 // Shares the watch's non-screen outputs (motor, button, battery, steps, emulated time) with an outside window through a memory-mapped file.
 
 using System;

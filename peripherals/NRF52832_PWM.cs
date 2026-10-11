@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
 // The nRF52832's pulse width modulator: plays EasyDMA sequences in virtual time and reports each channel's duty cycle.
 
 using System;

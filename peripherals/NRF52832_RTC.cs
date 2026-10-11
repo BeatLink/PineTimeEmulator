@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
 // The nRF52832 real-time counter: a 24-bit counter on the 32768 Hz clock with tick, overflow and compare events, worked out from virtual time.
 
 using System;

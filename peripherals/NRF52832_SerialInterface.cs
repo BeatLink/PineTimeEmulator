@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
 // One nRF52832 shared serial block that acts as SPI, SPIM, TWI or TWIM depending on its ENABLE value.
 
 using System;

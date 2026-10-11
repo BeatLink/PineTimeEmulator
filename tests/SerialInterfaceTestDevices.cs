@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
 // Test-only bus devices that record what the serial interface sends them.
 
 using System.Collections.Generic;

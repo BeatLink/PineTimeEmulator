@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
 """Paints the watch body procedurally: a dark rounded case, the glass around the 240x240 screen, strap stubs and the side button."""
 
 import math

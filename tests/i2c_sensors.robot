@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
 *** Settings ***
 Suite Setup       Include Sensor Models
 Suite Teardown    Teardown

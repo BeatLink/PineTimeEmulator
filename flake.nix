@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
 {
   description = "PineTimeEmulator: the PineTime smartwatch emulated on Renode";
 

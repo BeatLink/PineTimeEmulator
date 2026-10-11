@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
 // The nRF52832 timer/counter: a 16 MHz prescaled counter, or a task-driven counter, with compare, capture and shortcuts, worked out from virtual time.
 
 using System;

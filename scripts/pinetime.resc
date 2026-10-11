@@ -1,5 +1,6 @@
 :name: PineTime
 :description: Emulates a PineTime smartwatch; load firmware images into sysbus after including this script.
+# SPDX-License-Identifier: GPL-3.0-or-later
 
 $name?="pinetime"
 $root?=$ORIGIN/..

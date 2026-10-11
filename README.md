@@ -30,5 +30,6 @@ PineTimeEmulator/
 
 ## License
 
-To be decided. `platform/nrf52.svd` is Nordic's register description under its own BSD-3-Clause
-licence.
+GPL-3.0-or-later: you can redistribute and change it under the terms of the GNU General Public
+License, version 3 or any later version. See [COPYING](COPYING). `platform/nrf52.svd` is Nordic's
+register description under its own BSD-3-Clause licence.

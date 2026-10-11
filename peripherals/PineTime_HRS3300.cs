@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
 // The PineTime's Tianyi HRS3300 heart rate sensor: a synthetic pulse on the HRS channel and steady ambient light on the ALS channel.
 
 using System;

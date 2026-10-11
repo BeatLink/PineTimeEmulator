@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
 """Readers for the two memory-mapped files Renode writes: the screen frames and the status block.
 
 Frame file (peripherals/PineTime_ST7789.cs, ShareFramesThrough), little-endian:

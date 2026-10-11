@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
 // The PineTime's side button: while pressed it joins P0.13 to the P0.15 power line; the space bar presses it.
 
 using System;

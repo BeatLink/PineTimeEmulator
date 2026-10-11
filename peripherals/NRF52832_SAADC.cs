@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
 // The nRF52832's successive approximation ADC: converts the voltages set from the monitor and writes 16-bit results to RAM.
 
 using System;

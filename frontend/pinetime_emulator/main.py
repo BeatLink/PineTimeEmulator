@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
 """The pinetime-emulator command: starts Renode with the watch and opens the window onto it."""
 
 import argparse

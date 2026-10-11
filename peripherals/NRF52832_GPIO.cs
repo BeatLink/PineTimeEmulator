@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
 // The nRF52832's GPIO port P0: each pin carries a real electrical level built from the chip's driver, outside devices, internal and board pulls, with SENSE, LATCH and DETECT.
 
 using System;
