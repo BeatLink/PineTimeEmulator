@@ -40,6 +40,9 @@ impl EventKey {
 // Scheduler
 // ============================================================================
 
+/// The queue is compacted once it holds more than this many entries and most of them are stale.
+const COMPACT_ABOVE: usize = 64;
+
 #[derive(Default)]
 pub struct Scheduler {
     queue: BinaryHeap<Reverse<(Cycle, u64, EventKey)>>,
@@ -58,6 +61,21 @@ impl Scheduler {
         self.next_generation += 1;
         self.live.insert(key, generation);
         self.queue.push(Reverse((cycle, generation, key)));
+        if self.queue.len() > COMPACT_ABOVE && self.queue.len() > 2 * self.live.len() {
+            self.drop_every_stale_entry();
+        }
+    }
+
+    /// Rebuilds the queue from the live entries, so moved alarms that lie far ahead do not pile up.
+    fn drop_every_stale_entry(&mut self) {
+        let live = &self.live;
+        self.queue
+            .retain(|Reverse((_, generation, key))| live.get(key) == Some(generation));
+    }
+
+    /// How many entries the queue holds, stale ones included; for tests.
+    pub fn queued_entries(&self) -> usize {
+        self.queue.len()
     }
 
     pub fn cancel(&mut self, key: EventKey) {
@@ -141,6 +159,17 @@ mod tests {
 
         assert!(!scheduler.is_scheduled(RTC));
         assert_eq!(scheduler.next_deadline(), None);
+    }
+
+    #[test]
+    fn moving_an_alarm_again_and_again_keeps_the_queue_small() {
+        let mut scheduler = Scheduler::new();
+        for step in 0..10_000 {
+            scheduler.schedule(RTC, 1_000_000 + step);
+        }
+
+        assert!(scheduler.queued_entries() <= 2 * COMPACT_ABOVE);
+        assert_eq!(scheduler.pop_due(2_000_000), Some((1_009_999, RTC)));
     }
 
     #[test]
