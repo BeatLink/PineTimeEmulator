@@ -1,0 +1,13 @@
+[package]
+name = "pinetime-cortex-m4"
+version = "0.1.0"
+description = "The PineTime's Arm Cortex-M4 core with its NVIC, SCB, SysTick, DWT and FPU"
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+pinetime-core = { path = "../core" }
+
+[dev-dependencies]
+capstone = "0.13"

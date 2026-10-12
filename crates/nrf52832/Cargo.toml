@@ -1,0 +1,11 @@
+# SPDX-License-Identifier: GPL-3.0-only
+[package]
+name = "pinetime-nrf52832"
+version = "0.1.0"
+description = "The nRF52832: its memory and every peripheral the PineTime firmware uses"
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+pinetime-core = { path = "../core" }

@@ -1,20 +1,10 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
-# The pinetime-emulator command: the frontend/ window, wrapped with Renode, SDL2, a font and the emulator tree.
-{ pkgs, renode, infinitime_app, hci_controller }:
+# The pinetime-emulator command: the frontend/ window, wrapped with the engine, SDL2 and a font.
+{ pkgs, pinetime_engine, infinitime_app }:
 
 let
   lib = pkgs.lib;
   python_packages = pkgs.python3Packages;
-
-  # The Renode side of the emulator that the window starts: board scripts, platform files and C# models.
-  emulator_tree = lib.fileset.toSource {
-    root = ../.;
-    fileset = lib.fileset.unions [
-      ../peripherals
-      ../platform
-      ../scripts
-    ];
-  };
 in
 python_packages.buildPythonApplication {
   pname = "pinetime-emulator";
@@ -26,10 +16,8 @@ python_packages.buildPythonApplication {
   dependencies = [ python_packages.pysdl2 ];
 
   makeWrapperArgs = [
-    "--set-default" "PINETIME_EMULATOR_RENODE" "${renode}/bin/renode"
-    "--set-default" "PINETIME_EMULATOR_ROOT" "${emulator_tree}"
+    "--set-default" "PINETIME_EMULATOR_ENGINE" "${pinetime_engine}/bin/pinetime-engine"
     "--set-default" "PINETIME_EMULATOR_INFINITIME" "${infinitime_app}/pinetime-app-${lib.getVersion infinitime_app}.out"
-    "--set-default" "PINETIME_EMULATOR_HCI_CONTROLLER" "${hci_controller}"
     "--set-default" "PINETIME_EMULATOR_FONT" "${pkgs.dejavu_fonts}/share/fonts/truetype/DejaVuSansMono.ttf"
     "--set-default" "PYSDL2_DLL_PATH" (lib.makeLibraryPath [ pkgs.SDL2 pkgs.SDL2_ttf ])
   ];
@@ -37,7 +25,7 @@ python_packages.buildPythonApplication {
   pythonImportsCheck = [ "pinetime_emulator.main" ];
 
   meta = {
-    description = "A desktop window onto the Renode PineTime emulator";
+    description = "A desktop window onto the PineTime emulator";
     mainProgram = "pinetime-emulator";
     license = lib.licenses.gpl3Plus;
   };

@@ -1,0 +1,7 @@
+[package]
+name = "pinetime-core"
+version = "0.1.0"
+description = "Time, scheduling and the contracts between the CPU, the chip and the watch parts"
+edition.workspace = true
+license.workspace = true
+publish.workspace = true

@@ -1,0 +1,17 @@
+[package]
+name = "pinetime-emulator"
+version = "0.1.0"
+description = "The emulated PineTime: machine, image loading, the monitor and the window link"
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[[bin]]
+name = "pinetime-engine"
+path = "src/main.rs"
+
+[dependencies]
+pinetime-core = { path = "../core" }
+pinetime-cortex-m4 = { path = "../cortex-m4" }
+pinetime-nrf52832 = { path = "../nrf52832" }
+pinetime-board = { path = "../board" }

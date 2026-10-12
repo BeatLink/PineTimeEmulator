@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
-"""The desktop window: the drawn watch showing Renode's screen, mouse and keys as inputs, and a side panel of controls."""
+"""The desktop window: the drawn watch showing the emulated screen, mouse and keys as inputs, and a side panel of controls."""
 
 import ctypes
 import os
@@ -13,7 +13,7 @@ from typing import Callable
 import sdl2
 import sdl2.sdlttf as ttf
 
-from . import renode as parts
+from . import engine as parts
 from . import watch_body
 from .png import write_rgb_png
 from .shared import FrameReader, StatusReader
@@ -29,7 +29,7 @@ FRAME_INTERVAL = 1 / 60
 BUZZ_AFTERGLOW = 0.25
 SHAKE_PIXELS = 2
 
-# A press shorter than this reaches Renode stretched to it, since a scripted click lasts no emulated time and the firmware polls too late to see it.
+# A press shorter than this reaches the engine stretched to it, since a scripted click lasts no emulated time and the firmware polls too late to see it.
 MINIMUM_PRESS_SECONDS = 0.08
 IDLE_REDRAW_INTERVAL = 0.25
 
@@ -84,7 +84,7 @@ class PanelText:
 
 @dataclass
 class Inputs:
-    """What the window last asked the watch for, where Renode has no cheap way to report it."""
+    """What the window last asked the watch for, where the engine has no cheap way to report it."""
     heart_rate: int = 70
     tilt: str = "flat"
     paused: bool = False
@@ -203,7 +203,7 @@ class Window:
                 self.save_screenshot(screenshot_path)
                 return True
             if not self.emulator.running():
-                print(f"pinetime-emulator: Renode stopped; its log is {self.emulator.log_path}", flush=True)
+                print(f"pinetime-emulator: the engine stopped; its log is {self.emulator.log_path}", flush=True)
                 return False
             if timeout is not None and time.monotonic() - started > timeout:
                 print("pinetime-emulator: timed out waiting for emulated time", flush=True)
@@ -509,7 +509,7 @@ class Window:
     def status_text(self):
         status = self.status
         if status is None:
-            return "Starting Renode..."
+            return "Starting the emulator..."
         frame = self.frame
         battery = f"Battery {status.battery_percent}%"
         if status.charging:

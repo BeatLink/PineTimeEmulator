@@ -1,0 +1,10 @@
+[package]
+name = "pinetime-board"
+version = "0.1.0"
+description = "The parts on the PineTime board: screen, external flash, touch, sensors, button, battery and motor"
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+pinetime-core = { path = "../core" }

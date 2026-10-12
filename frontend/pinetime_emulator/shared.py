@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
-"""Readers for the two memory-mapped files Renode writes: the screen frames and the status block.
+"""Readers for the two memory-mapped files the engine writes: the screen frames and the status block.
 
-Frame file (peripherals/PineTime_ST7789.cs, ShareFramesThrough), little-endian:
+Frame file (crates/emulator/src/sharing.rs, ShareFramesThrough), little-endian:
     0  u32  magic "PTFB"
     4  u32  version (1)
     8  u32  sequence: odd while a frame is being written
@@ -11,7 +11,7 @@ Frame file (peripherals/PineTime_ST7789.cs, ShareFramesThrough), little-endian:
    24  u32  backlight level 0..3
    28  u32  header size (64); the RGB pixels follow it, 3 bytes each
 
-Status file (peripherals/PineTime_WindowBridge.cs, ShareStatusThrough), little-endian:
+Status file (crates/emulator/src/sharing.rs, ShareStatusThrough), little-endian:
     0  u32  magic "PTST"
     4  u32  version (1)
     8  u32  sequence: odd while being written
@@ -74,7 +74,7 @@ class Status:
 # ============================================================================
 
 class _MappedFile:
-    """A read-only map of a file Renode creates, opened once the file exists and is complete."""
+    """A read-only map of a file the engine creates, opened once the file exists and is complete."""
 
     def __init__(self, path, minimum_size):
         self.path = path
