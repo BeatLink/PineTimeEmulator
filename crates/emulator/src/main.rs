@@ -3,34 +3,44 @@
 
 use std::io::{BufRead, BufReader, Write};
 use std::net::{TcpListener, TcpStream};
+use std::path::{Path, PathBuf};
 use std::sync::mpsc::{self, Receiver, RecvTimeoutError, Sender};
 use std::thread;
 use std::time::{Duration, Instant};
 
 use pinetime_core::time::{cycles_from_milliseconds, nanoseconds_from_cycles};
-use pinetime_emulator::monitor::{Monitor, Reply};
+use pinetime_emulator::monitor::{default_hci_controller, Monitor, Reply};
 
 // ============================================================================
 // Command line
 // ============================================================================
 
-const USAGE: &str = "usage: pinetime-engine [--port PORT] [--execute COMMAND]... [SCRIPT]
+const USAGE: &str = "usage: pinetime-engine [--port PORT] [--bluetooth LINK [--hci-controller ELF]]
+                       [--execute COMMAND]... [SCRIPT]
 
 Runs an emulated PineTime. Commands come from SCRIPT, each --execute, then the TCP port (one
 connection at a time is fine, several work) or, without --port, standard input. Each reply ends
-with the prompt line `(pinetime) `.";
+with the prompt line `(pinetime) `.
+
+--bluetooth adds the Bluetooth bridge, an emulated controller whose HCI is a pseudo-terminal
+behind the symlink LINK, for `btattach -B LINK -P h4 -S 1000000`. It runs ELF, or the firmware
+$PINETIME_EMULATOR_HCI_CONTROLLER names, and stays across `mach create`.";
 
 pub const PROMPT: &str = "(pinetime) ";
 
 struct Options {
     port: Option<u16>,
     commands: Vec<String>,
+    bluetooth_link: Option<PathBuf>,
+    hci_controller: Option<PathBuf>,
 }
 
 fn parse_options() -> Result<Options, String> {
     let mut options = Options {
         port: None,
         commands: Vec::new(),
+        bluetooth_link: None,
+        hci_controller: None,
     };
     let mut arguments = std::env::args().skip(1);
     while let Some(argument) = arguments.next() {
@@ -38,6 +48,14 @@ fn parse_options() -> Result<Options, String> {
             "--port" | "-P" => {
                 let port = arguments.next().ok_or("--port needs a number")?;
                 options.port = Some(port.parse().map_err(|_| format!("not a port: {port}"))?);
+            }
+            "--bluetooth" => {
+                options.bluetooth_link =
+                    Some(arguments.next().ok_or("--bluetooth needs a link path")?.into());
+            }
+            "--hci-controller" => {
+                options.hci_controller =
+                    Some(arguments.next().ok_or("--hci-controller needs a file")?.into());
             }
             "--execute" | "-e" => options
                 .commands
@@ -50,6 +68,9 @@ fn parse_options() -> Result<Options, String> {
             script if !script.starts_with('-') => options.commands.insert(0, format!("include @{script}")),
             unknown => return Err(format!("unknown option {unknown}\n\n{USAGE}")),
         }
+    }
+    if options.hci_controller.is_some() && options.bluetooth_link.is_none() {
+        return Err("--hci-controller needs --bluetooth".into());
     }
     Ok(options)
 }
@@ -70,6 +91,12 @@ fn main() {
     }
 
     let mut monitor = Monitor::new();
+    if let Some(link) = &options.bluetooth_link {
+        if let Err(message) = attach_bluetooth(&mut monitor, link, options.hci_controller.as_deref()) {
+            eprintln!("--bluetooth: {message}");
+            std::process::exit(1);
+        }
+    }
     for command in &options.commands {
         match monitor.execute(command) {
             Ok(output) if !output.is_empty() => println!("{output}"),
@@ -78,6 +105,25 @@ fn main() {
         }
     }
     run_engine(&mut monitor, receiver);
+}
+
+/// Attaches the bridge before any command runs, so scripts and clients find it in place.
+fn attach_bluetooth(monitor: &mut Monitor, link: &Path, controller: Option<&Path>) -> Result<(), String> {
+    let controller = match controller {
+        Some(path) => path.to_path_buf(),
+        None => default_hci_controller()?,
+    };
+    monitor.attach_bluetooth(link, &controller)?;
+    eprintln!(
+        "pinetime-engine: the Bluetooth controller's HCI is at {} ({})",
+        link.display(),
+        monitor
+            .bluetooth
+            .as_ref()
+            .map(|bridge| bridge.terminal.terminal_path().display().to_string())
+            .unwrap_or_default()
+    );
+    Ok(())
 }
 
 // ============================================================================

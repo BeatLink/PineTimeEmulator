@@ -4,7 +4,7 @@
 
 use super::{plain, triggers, PlainRegister, PlainRegisters};
 use crate::context::Context;
-use crate::memory::{FLASH_PAGE_SIZE, FLASH_SIZE};
+use crate::memory::FLASH_PAGE_SIZE;
 
 // ============================================================================
 // Registers
@@ -96,7 +96,7 @@ impl Nvmc {
 
     fn erase_page(&mut self, address: u32, context: &mut Context) {
         let page_start = address as usize & !(FLASH_PAGE_SIZE - 1);
-        if !self.erase_enabled() || page_start >= FLASH_SIZE {
+        if !self.erase_enabled() || page_start >= context.memory.flash.len() {
             self.ignored_writes += 1;
             return;
         }

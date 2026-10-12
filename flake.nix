@@ -21,9 +21,10 @@
           infinitime_source = infinitime;
         };
         pinetime_engine = pkgs.callPackage ./nix/pinetime-engine.nix { };
+        hci_controller = pkgs.callPackage ./nix/hci-controller.nix { };
         pinetime_test = import ./nix/pinetime-test.nix { inherit pkgs pinetime_engine; };
         pinetime_emulator = import ./nix/pinetime-emulator.nix {
-          inherit pkgs pinetime_engine;
+          inherit pkgs pinetime_engine hci_controller;
           infinitime_app = infinitime_packages.infinitime-app;
         };
       in
@@ -65,12 +66,16 @@
             pinetime_emulator
           ];
 
+          # The firmware `pinetime-engine --bluetooth` and `bluetooth Attach` run by default.
+          PINETIME_EMULATOR_HCI_CONTROLLER = "${hci_controller}";
+
           shellHook = ''
             echo "PineTimeEmulator"
             echo "  cargo test                      run the emulator's tests"
             echo "  pinetime-engine                 open the emulator monitor on standard input"
             echo "  pinetime-test SUITE.robot       run Robot suites, as renode-test did"
             echo "  pinetime-emulator --infinitime  open the watch window"
+            echo "  pinetime-emulator --infinitime --bluetooth  the same, with a controller btattach can hand to BlueZ"
             echo "  pytest tests/                   run the window tests"
           '';
         };

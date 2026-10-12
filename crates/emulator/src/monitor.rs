@@ -9,6 +9,7 @@ use std::path::{Path, PathBuf};
 use pinetime_core::time::{cycles_from_nanoseconds, nanoseconds_from_cycles};
 use pinetime_core::AccessSize;
 
+use crate::bluetooth::Bridge;
 use crate::images::{binary_pieces, elf_pieces, hex_pieces, Piece};
 use crate::machine::Machine;
 use crate::parts;
@@ -33,8 +34,21 @@ pub struct Monitor {
     pub quit_requested: bool,
     pub frame_file: Option<FrameFile>,
     pub status_file: Option<StatusFile>,
+    /// The Bluetooth bridge, while one is attached.
+    pub bluetooth: Option<Bridge>,
+    bluetooth_attachment: Option<BluetoothAttachment>,
     watchpoint_logs: Vec<WatchpointLog>,
 }
+
+/// Where the bridge's terminal link is and which controller it runs, kept so `mach create` can rebuild it.
+#[derive(Clone)]
+struct BluetoothAttachment {
+    link: PathBuf,
+    controller: PathBuf,
+}
+
+/// The environment variable naming the controller firmware `bluetooth Attach` loads by default.
+pub const HCI_CONTROLLER_VARIABLE: &str = "PINETIME_EMULATOR_HCI_CONTROLLER";
 
 struct WatchpointLog {
     address: u32,
@@ -51,6 +65,8 @@ impl Monitor {
             quit_requested: false,
             frame_file: None,
             status_file: None,
+            bluetooth: None,
+            bluetooth_attachment: None,
             watchpoint_logs: Vec::new(),
         }
     }
@@ -90,6 +106,7 @@ impl Monitor {
             "logLevel" | "showAnalyzer" | "using" => Ok(String::new()),
             "sysbus" => self.sysbus(&rest),
             "cpu" | "sysbus.cpu" => self.cpu(&rest),
+            "bluetooth" => self.bluetooth_command(&rest),
             part => self.part(part, &rest),
         }
     }
@@ -130,8 +147,13 @@ impl Monitor {
 
     fn mach(&mut self, words: &[&str]) -> Reply {
         match words.first().copied() {
+            // The bridge is a machine of its own, so a new watch gets a fresh bridge at the same link.
             Some("create") => {
+                let attachment = self.bluetooth_attachment.take();
                 *self = Monitor::new();
+                if let Some(attachment) = attachment {
+                    self.attach_bluetooth(&attachment.link, &attachment.controller)?;
+                }
                 Ok(String::new())
             }
             Some("clear") | Some("set") => Ok(String::new()),
@@ -169,8 +191,15 @@ impl Monitor {
         }
     }
 
-    /// Runs the machine to `target`, writing every watchpoint hit to its log on the way.
+    /// Runs the machine to `target`, and the Bluetooth bridge with it when one is attached,
+    /// writing every watchpoint hit to its log on the way.
     pub fn run_until(&mut self, target: u64) {
+        if let Some(bridge) = self.bluetooth.as_mut() {
+            let logs = &self.watchpoint_logs;
+            bridge.run_with(&mut self.machine, target, |watch| {
+                write_watchpoint_logs(watch, logs)
+            });
+        }
         while self.machine.now() < target {
             self.machine.run_until(target);
             self.write_watchpoint_logs();
@@ -179,20 +208,73 @@ impl Monitor {
     }
 
     fn write_watchpoint_logs(&mut self) {
-        for hit in self.machine.take_watchpoint_hits() {
-            for log in self
-                .watchpoint_logs
-                .iter()
-                .filter(|log| log.address == hit.address)
-            {
-                if let Ok(mut file) = fs::OpenOptions::new().create(true).append(true).open(&log.path) {
-                    let _ = writeln!(
-                        file,
-                        "{:x} {:x} {:x}",
-                        hit.address, hit.program_counter, hit.value
-                    );
-                }
+        write_watchpoint_logs(&mut self.machine, &self.watchpoint_logs);
+    }
+
+    // ------------------------------------------------------------------------
+    // Bluetooth bridge
+    // ------------------------------------------------------------------------
+
+    fn bluetooth_command(&mut self, words: &[&str]) -> Reply {
+        match words.first().copied() {
+            Some("Attach") => {
+                let link = path_argument(argument(words, 1)?);
+                let controller = match words.get(2) {
+                    Some(text) => path_argument(text),
+                    None => default_hci_controller()?,
+                };
+                self.attach_bluetooth(&link, &controller)?;
+                Ok(String::new())
             }
+            Some("Detach") => {
+                self.detach_bluetooth();
+                Ok(String::new())
+            }
+            Some("Terminal") => Ok(self
+                .bluetooth
+                .as_ref()
+                .map(|bridge| bridge.terminal.terminal_path().display().to_string())
+                .unwrap_or_default()),
+            Some("Status") => Ok(match self.bluetooth.as_mut() {
+                Some(bridge) => format!(
+                    "link {} terminal {} controller pc {:#x} frames sent {} watch frames sent {} \
+                     unhandled accesses {}",
+                    bridge.terminal.link().display(),
+                    bridge.terminal.terminal_path().display(),
+                    bridge.machine.cpu.pc(),
+                    bridge.machine.chip.radio_transmitted_frames(),
+                    self.machine.chip.radio_transmitted_frames(),
+                    bridge.machine.chip.unhandled_access_count(),
+                ),
+                None => "detached".into(),
+            }),
+            _ => {
+                Err("usage: bluetooth Attach @PTY_LINK [@CONTROLLER_ELF] | Detach | Terminal | Status".into())
+            }
+        }
+    }
+
+    /// Adds the bridge: an nRF52840 running `controller` on the watch's air, its HCI behind `link`.
+    pub fn attach_bluetooth(&mut self, link: &Path, controller: &Path) -> Result<(), String> {
+        self.detach_bluetooth();
+        let firmware = read_file(controller)?;
+        let bridge = Bridge::new(self.machine.now(), &firmware, link)
+            .map_err(|error| format!("{}: {error}", controller.display()))?;
+        self.machine
+            .chip
+            .set_radio_medium(Some(Box::new(bridge.watch_outbox.clone())));
+        self.bluetooth = Some(bridge);
+        self.bluetooth_attachment = Some(BluetoothAttachment {
+            link: link.to_path_buf(),
+            controller: controller.to_path_buf(),
+        });
+        Ok(())
+    }
+
+    pub fn detach_bluetooth(&mut self) {
+        self.bluetooth_attachment = None;
+        if self.bluetooth.take().is_some() {
+            self.machine.chip.set_radio_medium(None);
         }
     }
 
@@ -418,6 +500,28 @@ impl Monitor {
 impl Default for Monitor {
     fn default() -> Monitor {
         Monitor::new()
+    }
+}
+
+/// The controller firmware named by `$PINETIME_EMULATOR_HCI_CONTROLLER`.
+pub fn default_hci_controller() -> Result<PathBuf, String> {
+    std::env::var_os(HCI_CONTROLLER_VARIABLE)
+        .map(PathBuf::from)
+        .ok_or_else(|| format!("give the controller firmware or set ${HCI_CONTROLLER_VARIABLE}"))
+}
+
+/// Appends each watchpoint hit to the log files watching its address.
+fn write_watchpoint_logs(machine: &mut Machine, watchpoint_logs: &[WatchpointLog]) {
+    for hit in machine.take_watchpoint_hits() {
+        for log in watchpoint_logs.iter().filter(|log| log.address == hit.address) {
+            if let Ok(mut file) = fs::OpenOptions::new().create(true).append(true).open(&log.path) {
+                let _ = writeln!(
+                    file,
+                    "{:x} {:x} {:x}",
+                    hit.address, hit.program_counter, hit.value
+                );
+            }
+        }
     }
 }
 

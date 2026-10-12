@@ -4,7 +4,7 @@
 
 use std::collections::HashMap;
 
-use crate::chip::ResetKind;
+use crate::chip::{ResetKind, SerialPort};
 use crate::context::Context;
 use crate::peripherals::ccm_aar::CcmAar;
 use crate::peripherals::comp_lpcomp::CompLpcomp;
@@ -24,9 +24,10 @@ use crate::peripherals::saadc::Saadc;
 use crate::peripherals::serial::SerialInterface;
 use crate::peripherals::temp::Temp;
 use crate::peripherals::timer::Timer;
-use crate::peripherals::uart::Uart;
+use crate::peripherals::uart::{Uart, UART0_BASE, UARTE1_BASE};
 use crate::peripherals::watchdog::Watchdog;
 use crate::ppi::Ppi;
+use crate::variant::Variant;
 
 // ============================================================================
 // Peripheral ids
@@ -35,6 +36,9 @@ use crate::ppi::Ppi;
 pub(crate) const PERIPHERAL_START: u32 = 0x4000_0000;
 pub(crate) const GPIO_START: u32 = 0x5000_0000;
 pub(crate) const GPIO_END: u32 = 0x5000_1000;
+/// The nRF52840's port P1 sits 0x300 above P0, so its registers start at 0x50000800.
+const GPIO_PORT1_OFFSET: u32 = 0x300;
+const GPIO_PORT1_REGISTERS_START: u32 = GPIO_START + 0x800;
 
 pub(crate) const POWER_CLOCK: u8 = 0x00;
 pub(crate) const RADIO: u8 = 0x01;
@@ -67,6 +71,7 @@ pub(crate) const PWM1: u8 = 0x21;
 pub(crate) const PWM2: u8 = 0x22;
 pub(crate) const SERIAL2: u8 = 0x23;
 pub(crate) const RTC2: u8 = 0x24;
+pub(crate) const UARTE1: u8 = 0x28;
 
 const fn base_of(id: u8) -> u32 {
     PERIPHERAL_START + ((id as u32) << 12)
@@ -80,6 +85,7 @@ const MAXIMUM_SETTLE_STEPS: u32 = 100_000;
 // ============================================================================
 
 pub(crate) struct Peripherals {
+    nrf52840: bool,
     pub power_clock: PowerClock,
     pub radio: Radio,
     pub uart: Uart,
@@ -101,6 +107,9 @@ pub(crate) struct Peripherals {
     pub nvmc: Nvmc,
     pub mwu: Mwu,
     pub ppi: Ppi,
+    /// The nRF52840's UARTE1 and GPIO port P1, used only on that variant.
+    pub uarte1: Uart,
+    pub gpio_port1: Gpio,
     unknown_registers: HashMap<u32, u32>,
     pub unhandled_accesses: u64,
     pub cut_off_chains: u64,
@@ -109,11 +118,13 @@ pub(crate) struct Peripherals {
 }
 
 impl Peripherals {
-    pub fn new() -> Peripherals {
+    pub fn new(variant: Variant) -> Peripherals {
+        let nrf52840 = variant.is_nrf52840();
         Peripherals {
+            nrf52840,
             power_clock: PowerClock::new(),
-            radio: Radio::new(),
-            uart: Uart::new(),
+            radio: Radio::new(nrf52840),
+            uart: Uart::new(UART0_BASE, nrf52840),
             serial: [
                 SerialInterface::new(base_of(SERIAL0), 0),
                 SerialInterface::new(base_of(SERIAL1), 1),
@@ -150,6 +161,8 @@ impl Peripherals {
             nvmc: Nvmc::new(),
             mwu: Mwu::new(),
             ppi: Ppi::new(),
+            uarte1: Uart::new(UARTE1_BASE, true),
+            gpio_port1: Gpio::new(),
             unknown_registers: HashMap::new(),
             unhandled_accesses: 0,
             cut_off_chains: 0,
@@ -172,6 +185,8 @@ impl Peripherals {
         self.power_clock.reset(context);
         self.radio.reset(context);
         self.uart.reset();
+        self.uarte1.reset();
+        self.gpio_port1.reset();
         for serial in &mut self.serial {
             serial.reset(context);
         }
@@ -213,10 +228,17 @@ impl Peripherals {
     pub fn read(&mut self, address: u32, context: &mut Context) -> u32 {
         let offset = address & 0xFFC;
         if (GPIO_START..GPIO_END).contains(&address) {
+            if self.nrf52840 && address >= GPIO_PORT1_REGISTERS_START {
+                return self.gpio_port1.read((address - GPIO_PORT1_OFFSET) & 0xFFC);
+            }
             return self.gpio.read(offset);
         }
         let id = ((address - PERIPHERAL_START) >> 12) as u8;
         if address >= base_of(RTC2) + 0x1000 {
+            if self.nrf52840 && id == UARTE1 {
+                context.touch(id);
+                return self.uarte1.read(offset, context);
+            }
             return self.read_unknown(address);
         }
         context.touch(id);
@@ -258,11 +280,21 @@ impl Peripherals {
     pub fn write(&mut self, address: u32, value: u32, context: &mut Context) {
         let offset = address & 0xFFC;
         if (GPIO_START..GPIO_END).contains(&address) {
+            if self.nrf52840 && address >= GPIO_PORT1_REGISTERS_START {
+                self.gpio_port1
+                    .write((address - GPIO_PORT1_OFFSET) & 0xFFC, value);
+                return;
+            }
             self.gpio.write(offset, value);
             return;
         }
         let id = ((address - PERIPHERAL_START) >> 12) as u8;
         if address >= base_of(RTC2) + 0x1000 {
+            if self.nrf52840 && id == UARTE1 {
+                context.touch(id);
+                self.uarte1.write(offset, value, context);
+                return;
+            }
             self.write_unknown(address, value);
             return;
         }
@@ -298,6 +330,15 @@ impl Peripherals {
             PPI => self.ppi.write(offset, value),
             MWU => self.mwu.write(offset, value),
             _ => self.write_unknown(address, value),
+        }
+    }
+
+    /// The UART a host link reaches as `port`, if this variant has it.
+    pub fn serial_port_mut(&mut self, port: SerialPort) -> Option<&mut Uart> {
+        match port {
+            SerialPort::Uart0 => Some(&mut self.uart),
+            SerialPort::Uarte1 if self.nrf52840 => Some(&mut self.uarte1),
+            SerialPort::Uarte1 => None,
         }
     }
 
@@ -365,6 +406,7 @@ impl Peripherals {
             PWM1 => self.pwms[1].interrupt_pending(),
             PWM2 => self.pwms[2].interrupt_pending(),
             MWU => self.mwu.interrupt_pending(),
+            UARTE1 => self.uarte1.interrupt_pending(),
             _ => false,
         }
     }

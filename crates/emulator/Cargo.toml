@@ -15,3 +15,4 @@ pinetime-core = { path = "../core" }
 pinetime-cortex-m4 = { path = "../cortex-m4" }
 pinetime-nrf52832 = { path = "../nrf52832" }
 pinetime-board = { path = "../board" }
+libc = "0.2"

@@ -69,6 +69,10 @@ P0.14, P0.22 and P0.23. Board pull-ups hold P0.05, P0.12, P0.19 and P0.25 high w
   `frontend/pinetime_emulator/shared.py`).
 - Reads the CPU's stack and reset address from the vector table when the watch first runs, so
   images loaded after `mach create` are the ones it starts, unless the monitor set PC or SP.
+- Runs the Bluetooth bridge (`bluetooth.rs`), a second machine built on the nRF52840 variant,
+  in lockstep with the watch, swapping their radio frames at every step end and carrying its
+  UARTE1 to a host pseudo-terminal (`pseudo_terminal.rs`); `pinetime-engine --bluetooth LINK` or
+  `bluetooth Attach` adds it. See [bluetooth.md](bluetooth.md).
 
 ## Debugging firmware
 

@@ -20,7 +20,7 @@ emulated second.
 | 0x10001000 | UICR | Starts erased, kept across resets |
 | 0x20000000 | RAM, 64 KB | Fixed noise after a power-on, kept across every other reset |
 | 0x40000000 | POWER and CLOCK | RESETREAS, GPREGRET kept across resets, System OFF and GPIO wake |
-| 0x40001000 | RADIO | Event timing, TIFS turnaround, address and device matching; frames go nowhere |
+| 0x40001000 | RADIO | Event timing, TIFS turnaround, address and device matching; frames reach the Bluetooth bridge when one is attached |
 | 0x40002000 | UART and UARTE | No baud timing |
 | 0x40003000, 0x40004000, 0x40023000 | SPI, SPIM, TWI, TWIM 0..2 | Chosen by ENABLE, with EasyDMA; one event per transfer at the configured bit rate |
 | 0x40006000 | GPIOTE | Event and task channels, PORT event, PPI |
@@ -80,11 +80,20 @@ externalFlash SaveBinary @flash.bin
 powerClock PowerCycle
 cpu PC
 cpu Step 20
+bluetooth Attach @/path/to/hci
+bluetooth Status
 ```
+
+## The Bluetooth bridge
+
+A second machine, an nRF52840 running Zephyr's Bluetooth LE controller, shares the watch's air
+and offers its HCI on a pseudo-terminal that `btattach` hands to BlueZ. The nRF52840 is a variant
+of the same chip models, with 1 MB of flash, 256 KB of RAM, GPIO port P1, UARTE1 and the newer
+radio events. See [bluetooth.md](bluetooth.md).
 
 ## Not emulated yet
 
-- A link to the computer's Bluetooth: radio frames go nowhere.
+- Radio whitening, collisions, Coded PHY and transmit power: frames either arrive whole or not at all.
 - SPIS and TWIS, UART baud timing, PWM driving pins, MWU memory watching, QDEC counting and
   COMP/LPCOMP analog levels.
 - An MPU, and late-arriving interrupts.

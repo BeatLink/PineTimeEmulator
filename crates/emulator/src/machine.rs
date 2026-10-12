@@ -1,21 +1,38 @@
 // SPDX-License-Identifier: GPL-3.0-only
-//! The whole watch: the CPU, the nRF52832 and the board, run against one emulated clock.
+//! A whole device: the CPU, the chip and its board, run against one emulated clock. The watch is
+//! a `Machine` with the PineTime's board; the Bluetooth bridge uses the same machine with its own.
 
 use pinetime_board::{AccelerometerModel, PineTimeBoard};
 use pinetime_core::{
-    AccessSize, BoardPorts, Bus, BusError, Cycle, EventKey, Owner, PinChange, QueuedContext, Scheduler,
+    AccessSize, BoardPorts, Bus, BusError, Cycle, DeviceContext, EventKey, Owner, PinChange, QueuedContext,
+    Scheduler,
 };
 use pinetime_cortex_m4::{CortexM4, StopReason};
-use pinetime_nrf52832::{ChipPorts, Nrf52832, ResetKind};
+use pinetime_nrf52832::{ChipPorts, Nrf52832, RadioFrame, ResetKind, SerialPort};
+
+// ============================================================================
+// Boards
+// ============================================================================
+
+/// The parts around the chip, which a power-on puts in their idle state.
+pub trait Board: BoardPorts {
+    fn power_on(&mut self, context: &mut dyn DeviceContext);
+}
+
+impl Board for PineTimeBoard {
+    fn power_on(&mut self, context: &mut dyn DeviceContext) {
+        PineTimeBoard::power_on(self, context);
+    }
+}
 
 // ============================================================================
 // Machine
 // ============================================================================
 
-pub struct Machine {
+pub struct Machine<B: Board = PineTimeBoard> {
     pub cpu: CortexM4,
     pub chip: Nrf52832,
-    pub board: PineTimeBoard,
+    pub board: B,
     pub scheduler: Scheduler,
     now: Cycle,
     locked_up: bool,
@@ -34,13 +51,21 @@ pub struct WatchpointHit {
 }
 
 impl Machine {
+    /// The PineTime: an nRF52832 on the watch's board, powered on at time zero.
     pub fn new() -> Machine {
+        Machine::with_parts(Nrf52832::new(), PineTimeBoard::new(AccelerometerModel::Bma425), 0)
+    }
+}
+
+impl<B: Board> Machine<B> {
+    /// A machine of `chip` on `board`, powered on with its clock at `start`.
+    pub fn with_parts(chip: Nrf52832, board: B, start: Cycle) -> Machine<B> {
         let mut machine = Machine {
             cpu: CortexM4::new(),
-            chip: Nrf52832::new(),
-            board: PineTimeBoard::new(AccelerometerModel::Bma425),
+            chip,
+            board,
             scheduler: Scheduler::new(),
-            now: 0,
+            now: start,
             locked_up: false,
             vector_table_unread: false,
             pending_watchpoint_hits: Vec::new(),
@@ -233,13 +258,45 @@ impl Machine {
     /// Lets a board part change in response to an outside input, then applies the pins it moved.
     pub fn with_board<Result>(
         &mut self,
-        change: impl FnOnce(&mut PineTimeBoard, &mut QueuedContext) -> Result,
+        change: impl FnOnce(&mut B, &mut QueuedContext) -> Result,
     ) -> Result {
         let mut context = QueuedContext::new(self.now, &mut self.scheduler);
         let result = change(&mut self.board, &mut context);
         let pin_changes = context.pin_changes;
         self.apply_pin_changes(pin_changes);
         result
+    }
+
+    /// Hands the chip a radio packet another machine started sending.
+    pub fn receive_radio_frame(&mut self, frame: RadioFrame) {
+        let mut ports = ChipPorts {
+            now: self.now,
+            scheduler: &mut self.scheduler,
+            board: &mut self.board,
+        };
+        self.chip.receive_radio_frame(frame, &mut ports);
+        self.deliver_interrupts();
+    }
+
+    /// Hands bytes from outside to the RX line of one of the chip's UARTs.
+    pub fn serial_port_receive(&mut self, port: SerialPort, bytes: &[u8]) {
+        let mut ports = ChipPorts {
+            now: self.now,
+            scheduler: &mut self.scheduler,
+            board: &mut self.board,
+        };
+        self.chip.serial_port_receive(port, bytes, &mut ports);
+        self.deliver_interrupts();
+    }
+
+    /// The earliest time this machine could act on its own: now while the CPU runs, else the next event.
+    pub fn quiet_until(&mut self) -> Cycle {
+        let cpu_can_run = !self.locked_up && !self.chip.system_off();
+        let cpu_waits = !cpu_can_run || (self.cpu.is_sleeping() && !self.cpu.wake_reason_pending());
+        if !cpu_waits {
+            return self.now;
+        }
+        self.scheduler.next_deadline().unwrap_or(Cycle::MAX).max(self.now)
     }
 
     fn apply_pin_changes(&mut self, pin_changes: Vec<PinChange>) {
@@ -297,9 +354,9 @@ impl Default for Machine {
 // ============================================================================
 
 /// Everything but the CPU, lent to the CPU while it runs.
-struct MachineBus<'a> {
+struct MachineBus<'a, B: BoardPorts> {
     chip: &'a mut Nrf52832,
-    board: &'a mut PineTimeBoard,
+    board: &'a mut B,
     scheduler: &'a mut Scheduler,
     now: Cycle,
     deadline: Cycle,
@@ -325,7 +382,7 @@ fn trace_access(now: Cycle, kind: &str, address: u32, value: Result<u32, BusErro
     }
 }
 
-impl MachineBus<'_> {
+impl<B: BoardPorts> MachineBus<'_, B> {
     /// A peripheral access may queue an event sooner than the CPU was told to run.
     #[inline]
     fn pull_deadline_in(&mut self, address: u32) {
@@ -337,7 +394,7 @@ impl MachineBus<'_> {
     }
 }
 
-impl Bus for MachineBus<'_> {
+impl<B: BoardPorts> Bus for MachineBus<'_, B> {
     #[inline]
     fn read(&mut self, address: u32, size: AccessSize) -> Result<u32, BusError> {
         let mut ports = ChipPorts {

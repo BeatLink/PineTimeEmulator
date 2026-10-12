@@ -102,7 +102,11 @@ const EVENT_RSSIEND: u32 = 7;
 const EVENT_BCMATCH: u32 = 10;
 const EVENT_CRCOK: u32 = 12;
 const EVENT_CRCERROR: u32 = 13;
+const EVENT_TXREADY: u32 = 21;
+const EVENT_RXREADY: u32 = 22;
+const EVENT_PHYEND: u32 = 27;
 const VALID_EVENTS: u32 = 0x34FF;
+const NRF52840_VALID_EVENTS: u32 = VALID_EVENTS | 1 << EVENT_TXREADY | 1 << EVENT_RXREADY | 1 << EVENT_PHYEND;
 
 const SHORT_READY_START: u32 = 1 << 0;
 const SHORT_END_DISABLE: u32 = 1 << 1;
@@ -112,7 +116,13 @@ const SHORT_ADDRESS_RSSISTART: u32 = 1 << 4;
 const SHORT_END_START: u32 = 1 << 5;
 const SHORT_ADDRESS_BCSTART: u32 = 1 << 6;
 const SHORT_DISABLED_RSSISTOP: u32 = 1 << 8;
+const SHORT_TXREADY_START: u32 = 1 << 18;
+const SHORT_RXREADY_START: u32 = 1 << 19;
+const SHORT_PHYEND_DISABLE: u32 = 1 << 20;
+const SHORT_PHYEND_START: u32 = 1 << 21;
 const VALID_SHORTCUTS: u32 = 0x17F;
+const NRF52840_VALID_SHORTCUTS: u32 =
+    VALID_SHORTCUTS | SHORT_TXREADY_START | SHORT_RXREADY_START | SHORT_PHYEND_DISABLE | SHORT_PHYEND_START;
 
 const MODE_NRF_2MBIT: u32 = 1;
 const MODE_NRF_250KBIT: u32 = 2;
@@ -268,6 +278,9 @@ struct Reception {
 // ============================================================================
 
 pub(crate) struct Radio {
+    /// The nRF52840 adds TXREADY, RXREADY and PHYEND and the shortcuts that use them.
+    nrf52840_registers: bool,
+    valid_shortcuts: u32,
     events: EventRegisters,
     plain: PlainRegisters,
     medium: Option<Box<dyn RadioMedium>>,
@@ -293,9 +306,16 @@ pub(crate) struct Radio {
 }
 
 impl Radio {
-    pub fn new() -> Radio {
+    pub fn new(nrf52840_registers: bool) -> Radio {
+        let (valid_events, valid_shortcuts) = if nrf52840_registers {
+            (NRF52840_VALID_EVENTS, NRF52840_VALID_SHORTCUTS)
+        } else {
+            (VALID_EVENTS, VALID_SHORTCUTS)
+        };
         Radio {
-            events: EventRegisters::new(BASE, VALID_EVENTS),
+            nrf52840_registers,
+            valid_shortcuts,
+            events: EventRegisters::new(BASE, valid_events),
             plain: PlainRegisters::new(&LAYOUT),
             medium: None,
             work: Vec::new(),
@@ -324,7 +344,7 @@ impl Radio {
     pub fn reset(&mut self, context: &mut Context) {
         let medium = self.medium.take();
         let transmitted_frames = self.transmitted_frames;
-        *self = Radio::new();
+        *self = Radio::new(self.nrf52840_registers);
         self.medium = medium;
         self.transmitted_frames = transmitted_frames;
         context.cancel(alarm_key());
@@ -336,6 +356,10 @@ impl Radio {
 
     pub fn transmitted_frames(&self) -> u64 {
         self.transmitted_frames
+    }
+
+    pub fn idle(&self) -> bool {
+        self.state == STATE_DISABLED && self.work.is_empty()
     }
 
     pub fn interrupt_pending(&self) -> bool {
@@ -565,13 +589,25 @@ impl Radio {
     }
 
     fn ready_reached(&mut self, context: &mut Context) {
-        self.state = if self.state == STATE_TX_RAMP_UP {
+        let transmitting = self.state == STATE_TX_RAMP_UP;
+        self.state = if transmitting {
             STATE_TX_IDLE
         } else {
             STATE_RX_IDLE
         };
         self.events.raise(EVENT_READY, context);
-        if self.shortcuts & SHORT_READY_START != 0 {
+        let direction_shortcut = if self.nrf52840_registers {
+            let (event, shortcut) = if transmitting {
+                (EVENT_TXREADY, SHORT_TXREADY_START)
+            } else {
+                (EVENT_RXREADY, SHORT_RXREADY_START)
+            };
+            self.events.raise(event, context);
+            shortcut
+        } else {
+            0
+        };
+        if self.shortcuts & (SHORT_READY_START | direction_shortcut) != 0 {
             self.shortcut(context.now, Action::Start);
         }
     }
@@ -887,9 +923,13 @@ impl Radio {
             );
         }
         self.events.raise(EVENT_END, context);
-        if self.shortcuts & SHORT_END_DISABLE != 0 {
+        // On the 1 and 2 Mbit modes the nRF52840's PHYEND comes with END.
+        if self.nrf52840_registers {
+            self.events.raise(EVENT_PHYEND, context);
+        }
+        if self.shortcuts & (SHORT_END_DISABLE | SHORT_PHYEND_DISABLE) != 0 {
             self.shortcut(time, Action::DisableAfterEnd);
-        } else if self.shortcuts & SHORT_END_START != 0 {
+        } else if self.shortcuts & (SHORT_END_START | SHORT_PHYEND_START) != 0 {
             self.shortcut(time, Action::Start);
         }
     }
@@ -965,7 +1005,7 @@ impl Radio {
                 self.cancel(WORK_BIT_COUNTER);
             }
             0x024..0x100 => {}
-            SHORTS => self.shortcuts = value & VALID_SHORTCUTS,
+            SHORTS => self.shortcuts = value & self.valid_shortcuts,
             CRCSTATUS | RXMATCH | RXCRC | DAI | RSSISAMPLE | STATE => {}
             DATAWHITEIV => self.whitening_seed = value & 0x7F,
             BCC => {

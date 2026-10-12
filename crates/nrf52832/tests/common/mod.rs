@@ -7,7 +7,7 @@ use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 
 use pinetime_core::{AccessSize, BoardPorts, Cycle, DeviceContext, EventKey, Owner, PinChange, Scheduler};
-use pinetime_nrf52832::{ChipPorts, Nrf52832, RadioFrame, RadioMedium, ResetKind};
+use pinetime_nrf52832::{ChipPorts, Nrf52832, RadioFrame, RadioMedium, ResetKind, Variant};
 
 pub const CYCLES_PER_MICROSECOND: u64 = 64;
 
@@ -191,10 +191,15 @@ impl Default for Harness {
 }
 
 impl Harness {
-    /// A chip after a power-on reset, with the event trace on.
+    /// An nRF52832 after a power-on reset, with the event trace on.
     pub fn new() -> Harness {
+        Harness::new_variant(Variant::Nrf52832)
+    }
+
+    /// A chip of `variant` after a power-on reset, with the event trace on.
+    pub fn new_variant(variant: Variant) -> Harness {
         let mut harness = Harness {
-            chip: Nrf52832::new(),
+            chip: Nrf52832::new_variant(variant),
             scheduler: Scheduler::new(),
             board: FakeBoard::default(),
             now: 0,

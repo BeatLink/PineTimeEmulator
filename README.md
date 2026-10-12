@@ -11,13 +11,14 @@ real time.
 InfiniTime 1.16.1 and NeoTime boot to their faces, and NeoTime's bootloader, update, recovery and
 migration suites pass. See [docs/hardware.md](docs/hardware.md) for what is emulated,
 [docs/rust-engine.md](docs/rust-engine.md) for how the engine is built, and
-[docs/todo.md](docs/todo.md) for open work. The Bluetooth bridge to the computer's BlueZ that the
-earlier Renode version had is not back yet.
+[docs/bluetooth.md](docs/bluetooth.md) for reaching the computer's Bluetooth, and
+[docs/todo.md](docs/todo.md) for open work.
 
 ## Running it
 
 ```sh
 nix run . -- --infinitime              # the watch window, running InfiniTime
+nix run . -- --infinitime --bluetooth  # the same, with a controller btattach can hand to BlueZ
 nix develop
 cargo test                             # every model, CPU and engine test
 pinetime-engine                        # the monitor on standard input
@@ -38,6 +39,7 @@ PineTimeEmulator/
 ├── robot/             Robot Framework keywords for pinetime-test
 ├── scripts/           pinetime.resc, the script suites include to build a watch
 ├── nix/               package definitions
+├── tools/             hci_scan.py, which checks the Bluetooth bridge without BlueZ
 └── tests/             the window test
 ```
 

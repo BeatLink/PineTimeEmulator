@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
-//! The UART and its EasyDMA form, the UARTE, which share 0x40002000. Bytes the firmware sends
-//! collect in an output buffer; bytes from outside wait in a queue until the receiver takes them.
-//! Bytes move at once, without baud-rate timing.
+//! The UART and its EasyDMA form, the UARTE, which share 0x40002000, and the nRF52840's UARTE1 at
+//! 0x40028000. Bytes the firmware sends collect in an output buffer; bytes from outside wait in a
+//! queue until a receiver is armed to take them. Bytes move at once, without baud-rate timing.
 
 use std::collections::VecDeque;
 
@@ -12,7 +12,8 @@ use crate::context::Context;
 // Registers
 // ============================================================================
 
-pub(crate) const BASE: u32 = 0x4000_2000;
+pub(crate) const UART0_BASE: u32 = 0x4000_2000;
+pub(crate) const UARTE1_BASE: u32 = 0x4002_8000;
 
 const TASKS_STARTRX: u32 = 0x000;
 const TASKS_STOPRX: u32 = 0x004;
@@ -47,24 +48,34 @@ const SHORT_ENDRX_STOPRX: u32 = 1 << 6;
 const ENABLE_UART: u32 = 4;
 const ENABLE_UARTE: u32 = 8;
 
-static LAYOUT: [PlainRegister; 10] = [
-    plain(0x200, 0, 0x78),
-    plain(0x508, 0xFFFF_FFFF, u32::MAX),
-    plain(0x50C, 0xFFFF_FFFF, u32::MAX),
-    plain(0x510, 0xFFFF_FFFF, u32::MAX),
-    plain(0x514, 0xFFFF_FFFF, u32::MAX),
-    plain(0x524, 0x0400_0000, u32::MAX),
-    plain(0x538, 0, 0xFF),
-    plain(0x548, 0, 0xFF),
-    plain(0x56C, 0, 0xF),
-    plain(0x51C, 0, 0xFF),
-];
+/// The nRF52832's UARTE counts up to 255 bytes per buffer.
+static NRF52832_LAYOUT: [PlainRegister; 10] = layout(0xFF);
+
+/// The nRF52840's UARTEs count up to 65535 bytes per buffer.
+static NRF52840_LAYOUT: [PlainRegister; 10] = layout(0xFFFF);
+
+const fn layout(maximum_count_mask: u32) -> [PlainRegister; 10] {
+    [
+        plain(0x200, 0, 0x78),
+        plain(0x508, 0xFFFF_FFFF, u32::MAX),
+        plain(0x50C, 0xFFFF_FFFF, u32::MAX),
+        plain(0x510, 0xFFFF_FFFF, u32::MAX),
+        plain(0x514, 0xFFFF_FFFF, u32::MAX),
+        plain(0x524, 0x0400_0000, u32::MAX),
+        plain(0x538, 0, maximum_count_mask),
+        plain(0x548, 0, maximum_count_mask),
+        plain(0x56C, 0, 0xF),
+        plain(0x51C, 0, 0xFF),
+    ]
+}
 
 // ============================================================================
 // UART and UARTE
 // ============================================================================
 
 pub(crate) struct Uart {
+    base: u32,
+    nrf52840_counts: bool,
     events: EventRegisters,
     plain: PlainRegisters,
     enable: u32,
@@ -81,10 +92,17 @@ pub(crate) struct Uart {
 }
 
 impl Uart {
-    pub fn new() -> Uart {
+    /// A UART at `base`; `nrf52840_counts` widens the EasyDMA byte counts to 16 bits.
+    pub fn new(base: u32, nrf52840_counts: bool) -> Uart {
         Uart {
-            events: EventRegisters::new(BASE, VALID_EVENTS),
-            plain: PlainRegisters::new(&LAYOUT),
+            base,
+            nrf52840_counts,
+            events: EventRegisters::new(base, VALID_EVENTS),
+            plain: PlainRegisters::new(if nrf52840_counts {
+                &NRF52840_LAYOUT
+            } else {
+                &NRF52832_LAYOUT
+            }),
             enable: 0,
             error_source: 0,
             receiving: false,
@@ -103,7 +121,7 @@ impl Uart {
     pub fn reset(&mut self) {
         let incoming = std::mem::take(&mut self.incoming);
         let output = std::mem::take(&mut self.output);
-        *self = Uart::new();
+        *self = Uart::new(self.base, self.nrf52840_counts);
         self.incoming = incoming;
         self.output = output;
     }
@@ -114,6 +132,10 @@ impl Uart {
 
     pub fn take_output(&mut self) -> Vec<u8> {
         std::mem::take(&mut self.output)
+    }
+
+    pub fn waiting_bytes(&self) -> usize {
+        self.incoming.len()
     }
 
     /// Queues bytes arriving on the RX line and hands them to a running receiver.

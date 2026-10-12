@@ -84,8 +84,10 @@ def quote_string(text):
 class Engine:
     """One pinetime-engine process with the watch built in it, controlled through its monitor port."""
 
-    def __init__(self, runtime_directory, engine_command=None, verbose=False):
+    def __init__(self, runtime_directory, engine_command=None, verbose=False, bluetooth=None):
         self.runtime_directory = Path(runtime_directory)
+        # A (pseudo-terminal link, controller firmware) pair, or None for no Bluetooth bridge.
+        self.bluetooth = bluetooth
         self.engine_command = engine_command or os.environ.get("PINETIME_EMULATOR_ENGINE") or shutil.which("pinetime-engine") or "pinetime-engine"
         self.verbose = verbose
         self.process = None
@@ -104,7 +106,7 @@ class Engine:
         port = _free_port()
         self.log_file = open(self.log_path, "wb")
         self.process = subprocess.Popen(
-            [self.engine_command, "--port", str(port)],
+            self._engine_arguments(port),
             stdin=subprocess.DEVNULL, stdout=self.log_file, stderr=subprocess.STDOUT,
             start_new_session=True,
         )
@@ -112,6 +114,13 @@ class Engine:
         threading.Thread(target=self._drain, daemon=True).start()
         for command in self._session_commands(images, flash_image):
             self.send(command)
+
+    def _engine_arguments(self, port):
+        arguments = [self.engine_command, "--port", str(port)]
+        if self.bluetooth:
+            link, controller = self.bluetooth
+            arguments += ["--bluetooth", str(link), "--hci-controller", str(controller)]
+        return arguments
 
     def _session_commands(self, images, flash_image):
         commands = ["mach create"]

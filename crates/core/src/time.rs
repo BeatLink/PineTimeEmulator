@@ -14,11 +14,11 @@ pub fn cycles_from_nanoseconds(nanoseconds: u64) -> Cycle {
     (nanoseconds as u128 * CPU_HERTZ as u128 / NANOSECONDS_PER_SECOND as u128) as Cycle
 }
 
-pub fn cycles_from_microseconds(microseconds: u64) -> Cycle {
+pub const fn cycles_from_microseconds(microseconds: u64) -> Cycle {
     microseconds * (CPU_HERTZ / 1_000_000)
 }
 
-pub fn cycles_from_milliseconds(milliseconds: u64) -> Cycle {
+pub const fn cycles_from_milliseconds(milliseconds: u64) -> Cycle {
     milliseconds * (CPU_HERTZ / 1_000)
 }
 

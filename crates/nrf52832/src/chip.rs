@@ -12,6 +12,7 @@ use crate::peripherals::power_clock::{
     RESET_REASON_WATCHDOG,
 };
 use crate::peripherals::radio::{RadioFrame, RadioMedium};
+use crate::variant::Variant;
 
 // ============================================================================
 // Public types
@@ -30,6 +31,13 @@ pub enum ResetKind {
     Lockup,
     /// A GPIO DETECT signal while in System OFF.
     WakeFromSystemOff,
+}
+
+/// The UARTs a host link can attach to; UARTE1 exists only on the nRF52840.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum SerialPort {
+    Uart0,
+    Uarte1,
 }
 
 /// Which accesses a watchpoint reports.
@@ -58,6 +66,7 @@ struct Watchpoint {
 // ============================================================================
 
 pub struct Nrf52832 {
+    variant: Variant,
     memory: Memory,
     signals: Signals,
     interrupts: InterruptLines,
@@ -86,22 +95,34 @@ macro_rules! context {
 }
 
 impl Nrf52832 {
-    /// A new chip: flash and UICR erased, the FICR filled in, and the PineTime's board pull-ups fitted.
+    /// A new nRF52832: flash and UICR erased, the FICR filled in, and the PineTime's board pull-ups fitted.
     pub fn new() -> Nrf52832 {
+        Nrf52832::new_variant(Variant::Nrf52832)
+    }
+
+    /// A new chip of either variant; only the nRF52832 gets the PineTime's board pull-ups.
+    pub fn new_variant(variant: Variant) -> Nrf52832 {
         let mut chip = Nrf52832 {
-            memory: Memory::new(),
+            variant,
+            memory: Memory::new(variant),
             signals: Signals::default(),
             interrupts: InterruptLines::default(),
-            peripherals: Peripherals::new(),
+            peripherals: Peripherals::new(variant),
             watchpoints: Vec::new(),
             watchpoint_hit: None,
         };
-        for pin in 0..32 {
-            if PINETIME_BOARD_PULL_UPS >> pin & 1 != 0 {
-                chip.peripherals.gpio.set_board_pull(pin, Some(true));
+        if variant == Variant::Nrf52832 {
+            for pin in 0..32 {
+                if PINETIME_BOARD_PULL_UPS >> pin & 1 != 0 {
+                    chip.peripherals.gpio.set_board_pull(pin, Some(true));
+                }
             }
         }
         chip
+    }
+
+    pub fn variant(&self) -> Variant {
+        self.variant
     }
 
     // ========================================================================
@@ -110,7 +131,7 @@ impl Nrf52832 {
 
     #[inline]
     pub fn read(&mut self, address: u32, size: AccessSize, ports: &mut ChipPorts) -> Result<u32, BusError> {
-        let value = match Memory::locate(address, size.bytes()) {
+        let value = match self.memory.locate(address, size.bytes()) {
             Some((region, offset)) => Memory::read_value(self.memory.bytes(region), offset, size),
             None => self.read_peripheral(address, size, ports)?,
         };
@@ -131,7 +152,7 @@ impl Nrf52832 {
         if !self.watchpoints.is_empty() {
             self.check_watchpoints(address, size, value, true);
         }
-        match Memory::locate(address, size.bytes()) {
+        match self.memory.locate(address, size.bytes()) {
             Some((Region::Ram | Region::Errata, offset)) => {
                 let region = if address >> 28 == 0xF {
                     Region::Errata
@@ -160,7 +181,7 @@ impl Nrf52832 {
     /// An instruction halfword from flash or RAM, without side effects.
     #[inline]
     pub fn fetch(&self, address: u32) -> Result<u16, BusError> {
-        match Memory::locate(address, 2) {
+        match self.memory.locate(address, 2) {
             Some((region @ (Region::Flash | Region::Ram), offset)) => {
                 let bytes = self.memory.bytes(region);
                 Ok(u16::from_le_bytes([bytes[offset], bytes[offset + 1]]))
@@ -383,15 +404,37 @@ impl Nrf52832 {
 
     /// Bytes arriving on the UART's RX line.
     pub fn uart_receive(&mut self, bytes: &[u8], ports: &mut ChipPorts) {
-        let mut context = context!(self, ports);
-        self.peripherals.uart.receive(bytes, &mut context);
-        self.peripherals.settle(&mut context);
-        self.update_interrupt_lines();
+        self.serial_port_receive(SerialPort::Uart0, bytes, ports);
     }
 
     /// The bytes the firmware sent on the UART since the last call.
     pub fn take_uart_output(&mut self) -> Vec<u8> {
-        self.peripherals.uart.take_output()
+        self.take_serial_port_output(SerialPort::Uart0)
+    }
+
+    /// Bytes arriving on the RX line of `port`; they wait until the firmware arms a receiver.
+    pub fn serial_port_receive(&mut self, port: SerialPort, bytes: &[u8], ports: &mut ChipPorts) {
+        let mut context = context!(self, ports);
+        if let Some(uart) = self.peripherals.serial_port_mut(port) {
+            uart.receive(bytes, &mut context);
+        }
+        self.peripherals.settle(&mut context);
+        self.update_interrupt_lines();
+    }
+
+    /// How many received bytes `port` holds that the firmware has not taken yet.
+    pub fn serial_port_waiting_bytes(&mut self, port: SerialPort) -> usize {
+        self.peripherals
+            .serial_port_mut(port)
+            .map_or(0, |uart| uart.waiting_bytes())
+    }
+
+    /// The bytes the firmware sent on `port` since the last call.
+    pub fn take_serial_port_output(&mut self, port: SerialPort) -> Vec<u8> {
+        self.peripherals
+            .serial_port_mut(port)
+            .map(|uart| uart.take_output())
+            .unwrap_or_default()
     }
 
     // ========================================================================
@@ -411,6 +454,12 @@ impl Nrf52832 {
 
     pub fn radio_transmitted_frames(&self) -> u64 {
         self.peripherals.radio.transmitted_frames()
+    }
+
+    /// Whether the radio is disabled with nothing queued, so it cannot send or hear a packet
+    /// until the firmware or the PPI starts it again.
+    pub fn radio_idle(&self) -> bool {
+        self.peripherals.radio.idle()
     }
 
     // ========================================================================
@@ -449,7 +498,7 @@ impl Nrf52832 {
         size: AccessSize,
         ports: &mut ChipPorts,
     ) -> Result<u32, BusError> {
-        match Memory::locate(address, size.bytes()) {
+        match self.memory.locate(address, size.bytes()) {
             Some((region, offset)) => Ok(Memory::read_value(self.memory.bytes(region), offset, size)),
             None => self.read_peripheral(address, size, ports),
         }
@@ -463,7 +512,7 @@ impl Nrf52832 {
         size: AccessSize,
         ports: &mut ChipPorts,
     ) -> Result<(), BusError> {
-        match Memory::locate(address, size.bytes()) {
+        match self.memory.locate(address, size.bytes()) {
             Some((region, offset)) => {
                 Memory::write_value(self.memory.bytes_mut(region), offset, value, size);
                 Ok(())

@@ -67,6 +67,7 @@ dependencies = [
 name = "pinetime-emulator"
 version = "0.1.0"
 dependencies = [
+ "libc",
  "pinetime-board",
  "pinetime-core",
  "pinetime-cortex-m4",
