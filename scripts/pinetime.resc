@@ -39,6 +39,9 @@ sysbus ApplySVD $root/platform/nrf52.svd
 # Parts wired to pins learn the starting level of each pin.
 gpio0 AnnounceAllLevels
 
+# The CPU changes flash only through the flash controller, as on the chip.
+nvmc GuardFlashWrites
+
 # Flash and UICR start erased, as on a new chip.
 flash SetRange 0 0x80000 0xFF
 uicr SetRange 0 0x1000 0xFF

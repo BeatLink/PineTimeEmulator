@@ -810,10 +810,19 @@ namespace Antmicro.Renode.Peripherals.SPI
             return systemBus.ReadBytes(address, count, context: this);
         }
 
+        // EasyDMA reaches only data RAM, so a pointer anywhere else (flash included) writes nothing.
         private void WriteMemory(byte[] bytes, ulong address)
         {
+            if(address < DataRamStart || address + (ulong)bytes.Length > DataRamEnd)
+            {
+                this.Log(LogLevel.Warning, "EasyDMA write of {0} bytes to 0x{1:X} is outside data RAM, dropped", bytes.Length, address);
+                return;
+            }
             systemBus.WriteBytes(bytes, address, context: this);
         }
+
+        private const ulong DataRamStart = 0x20000000;
+        private const ulong DataRamEnd = 0x20040000;
 
         // In array-list mode each transfer moves its pointer on by MAXCNT, so the next one uses the next buffer.
         private void AdvanceListCursors(int transmit_count, int receive_count)

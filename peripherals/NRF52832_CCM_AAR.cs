@@ -162,8 +162,8 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
             // An empty packet is sent unencrypted and without a MIC.
             var output = payload_length == 0 ? payload : CcmEncrypt(key, nonce, header[0], payload);
             header[1] = (byte)output.Length;
-            sysbus.WriteBytes(header, outputOrAddressPointer.Value);
-            sysbus.WriteBytes(output, outputOrAddressPointer.Value + PacketHeaderSize);
+            WriteDataRam(header, outputOrAddressPointer.Value);
+            WriteDataRam(output, outputOrAddressPointer.Value + PacketHeaderSize);
         }
 
         private void Decrypt(bool extended_length)
@@ -190,10 +190,24 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
             }
 
             header[1] = (byte)plaintext.Length;
-            sysbus.WriteBytes(header, outputOrAddressPointer.Value);
-            sysbus.WriteBytes(plaintext, outputOrAddressPointer.Value + PacketHeaderSize);
+            WriteDataRam(header, outputOrAddressPointer.Value);
+            WriteDataRam(plaintext, outputOrAddressPointer.Value + PacketHeaderSize);
             status = mic_passed ? 1u : 0u;
         }
+
+        // EasyDMA reaches only data RAM, so a pointer anywhere else (flash included) writes nothing.
+        private void WriteDataRam(byte[] bytes, ulong address)
+        {
+            if(address < DataRamStart || address + (ulong)bytes.Length > DataRamEnd)
+            {
+                this.Log(LogLevel.Warning, "EasyDMA write of {0} bytes to 0x{1:X} is outside data RAM, dropped", bytes.Length, address);
+                return;
+            }
+            sysbus.WriteBytes(bytes, address);
+        }
+
+        private const ulong DataRamStart = 0x20000000;
+        private const ulong DataRamEnd = 0x20040000;
 
         private byte[] ReadPacketHeader(ulong address, bool extended_length, out int length)
         {

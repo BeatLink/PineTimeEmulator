@@ -15,7 +15,7 @@ reaching the computer's Bluetooth.
 
 ```sh
 nix develop
-renode-test tests/            # run every model test
+renode-test tests/*.robot      # run every model test
 ```
 
 ## Layout

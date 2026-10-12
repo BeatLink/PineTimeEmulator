@@ -52,7 +52,7 @@
 
           shellHook = ''
             echo "PineTimeEmulator"
-            echo "  renode-test tests/          run every model test"
+            echo "  renode-test tests/*.robot   run every model test"
             echo "  renode scripts/pinetime.resc   open the emulator monitor"
             echo "  pinetime-emulator --infinitime  open the watch window"
             echo "  pytest tests/                   run the window tests"

@@ -618,7 +618,7 @@ namespace Antmicro.Renode.Peripherals.Wireless
         private void ReceivedAddress(ulong time, int addressIndex, RamHeader header, byte[] payload)
         {
             WriteRamHeader(receivePointer, header);
-            sysbus.WriteBytes(payload, receivePointer + (ulong)RamHeaderBytes);
+            WriteDataRam(payload, receivePointer + (ulong)RamHeaderBytes);
             receivedAddressIndex = (uint)addressIndex;
             AddressReached(time);
         }
@@ -753,8 +753,22 @@ namespace Antmicro.Renode.Peripherals.Wireless
             Array.Copy(header.S0, bytes, Math.Min(header.S0.Length, (int)s0Length.Value));
             StoreLittleEndian(bytes, (int)s0Length.Value, LengthFieldBytes, header.Length);
             StoreLittleEndian(bytes, (int)s0Length.Value + LengthFieldBytes, S1Bytes, header.S1);
-            sysbus.WriteBytes(bytes, pointer);
+            WriteDataRam(bytes, pointer);
         }
+
+        // EasyDMA reaches only data RAM, so a pointer anywhere else (flash included) writes nothing.
+        private void WriteDataRam(byte[] bytes, ulong address)
+        {
+            if(address < DataRamStart || address + (ulong)bytes.Length > DataRamEnd)
+            {
+                this.Log(LogLevel.Warning, "EasyDMA write of {0} bytes to 0x{1:X} is outside data RAM, dropped", bytes.Length, address);
+                return;
+            }
+            sysbus.WriteBytes(bytes, address);
+        }
+
+        private const ulong DataRamStart = 0x20000000;
+        private const ulong DataRamEnd = 0x20040000;
 
         private byte[] PackAirHeader(RamHeader header)
         {

@@ -10,7 +10,7 @@ What the emulator models, how it is wired, and what it leaves out. Each model is
 
 | Address | Part | Model | Notes |
 |---|---|---|---|
-| 0x00000000 | Flash, 512 KB | Renode memory | Starts erased (0xFF), kept across resets |
+| 0x00000000 | Flash, 512 KB | Renode memory | Starts erased (0xFF), kept across resets; the CPU writes it only with NVMC WEN set, and then only clears bits |
 | 0x10000000 | FICR | Renode memory | Part 0x52832, 64 KB RAM, 512 KB flash, a fixed device address |
 | 0x10001000 | UICR | Renode memory | Starts erased, kept across resets |
 | 0x20000000 | RAM, 64 KB | Renode memory | Random contents after `powerClock PowerCycle` |
@@ -81,13 +81,17 @@ Renode 1.17 decodes the Thumb-2 instruction `MOV.W Rd, SP` as illegal on Cortex-
 Nordic's SoftDevice. `nix/renode.nix` builds Renode with `nix/renode-thumb2-mov-from-sp.patch`,
 which fixes it.
 
+EasyDMA in SPIM, TWIM, SAADC, RADIO and CCM/AAR writes only to data RAM; a pointer anywhere else
+drops the write with a warning, as the chip cannot reach flash. Firmware that stores into flash by
+mistake, such as through a NULL buffer, is ignored as on a watch instead of wiping the vector table.
+
 ## Not emulated yet
 
 - Radio whitening, collisions, Coded PHY and transmit power: frames either arrive whole or not at all.
 - Timing of the CPU itself: instructions take no time beyond the clock, so speed-sensitive code
   runs faster or slower than on a watch.
 - PPI tasks run at the next time quantum, 20 µs at most, rather than at once.
-- NVMC write timing, and the rule that programming flash only clears bits.
+- NVMC write timing.
 - MWU memory watching, QDEC counting and COMP/LPCOMP analog levels.
 - The external flash sits at 0x60000000 on the system bus so tests can read it; real firmware never
   touches that address.

@@ -1,10 +1,12 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// The nRF52832's flash controller: it is always ready, and erases pages of flash and UICR to 0xFF.
+// The nRF52832's flash controller: it is always ready, erases pages of flash and UICR to 0xFF, and guards writes.
 
+using System.Linq;
 using Antmicro.Renode.Core;
 using Antmicro.Renode.Core.Structure.Registers;
 using Antmicro.Renode.Logging;
 using Antmicro.Renode.Peripherals.Bus;
+using Antmicro.Renode.Peripherals.CPU;
 using Antmicro.Renode.Peripherals.Memory;
 
 namespace Antmicro.Renode.Peripherals.Miscellaneous
@@ -19,6 +21,32 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
         }
 
         public long Size => 0x1000;
+
+        // The CPU writes flash only while WEN is set, and then can only clear bits; any other write is ignored.
+        // Data accesses to flash go through the bus so these hooks see them; instruction fetches stay direct.
+        public void GuardFlashWrites()
+        {
+            if(!flashWritesGuarded)
+            {
+                flashWritesGuarded = true;
+                machine.MachineReset += _ => RouteFlashThroughBus();
+                machine.SystemBus.SetHookBeforePeripheralWrite<byte>(flash, (value, offset) => (byte)GuardedWrite(flash.ReadByte(offset), value));
+                machine.SystemBus.SetHookBeforePeripheralWrite<ushort>(flash, (value, offset) => (ushort)GuardedWrite(flash.ReadWord(offset), value));
+                machine.SystemBus.SetHookBeforePeripheralWrite<uint>(flash, (value, offset) => GuardedWrite(flash.ReadDoubleWord(offset), value));
+            }
+            RouteFlashThroughBus();
+        }
+
+        // A CPU reset forgets which pages go through the bus, so this runs again after every one.
+        private void RouteFlashThroughBus()
+        {
+            var cpu = machine.SystemBus.GetCPUs().OfType<TranslationCPU>().First();
+            for(ulong page = 0; page < (ulong)flash.Size; page += PageSize)
+            {
+                cpu.SetPageAccessViaIo(page);
+                cpu.FlushTlbPage(page);
+            }
+        }
 
         // ====================================================================
         // Registers
@@ -70,6 +98,25 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
         }
 
         // ====================================================================
+        // Writing
+        // ====================================================================
+
+        // Loading images from the monitor is not a CPU write, so it always lands.
+        private uint GuardedWrite(uint stored, uint written)
+        {
+            if(!machine.SystemBus.TryGetCurrentCPU(out var _))
+            {
+                return written;
+            }
+            if(writeMode.Value != WriteMode.WriteEnabled)
+            {
+                this.Log(LogLevel.Noisy, "Ignored a flash write of 0x{0:X} without write enabled", written);
+                return stored;
+            }
+            return stored & written;
+        }
+
+        // ====================================================================
         // Erasing
         // ====================================================================
 
@@ -81,14 +128,14 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
                 return;
             }
 
-            var page_start = (long)address & ~(PageSize - 1);
+            var page_start = (long)address & ~((long)PageSize - 1);
             if(page_start >= flash.Size)
             {
                 this.Log(LogLevel.Warning, "Ignored an erase of page 0x{0:X} outside flash", address);
                 return;
             }
 
-            flash.SetRange(page_start, PageSize, ErasedByte);
+            flash.SetRange(page_start, (long)PageSize, ErasedByte);
         }
 
         private void EraseAll()
@@ -112,10 +159,11 @@ namespace Antmicro.Renode.Peripherals.Miscellaneous
             uicr.SetRange(0, uicr.Size, ErasedByte);
         }
 
-        private const long PageSize = 0x1000;
+        private const ulong PageSize = 0x1000;
         private const byte ErasedByte = 0xFF;
 
         private readonly MappedMemory flash;
+        private bool flashWritesGuarded;
         private readonly MappedMemory uicr;
         private IEnumRegisterField<WriteMode> writeMode;
 

@@ -350,6 +350,20 @@ namespace Antmicro.Renode.Peripherals.Analog
         // EasyDMA results
         // ====================================================================
 
+        // EasyDMA reaches only data RAM, so a pointer anywhere else (flash included) writes nothing.
+        private void WriteDataRam(byte[] bytes, ulong address)
+        {
+            if(address < DataRamStart || address + (ulong)bytes.Length > DataRamEnd)
+            {
+                this.Log(LogLevel.Warning, "EasyDMA write of {0} bytes to 0x{1:X} is outside data RAM, dropped", bytes.Length, address);
+                return;
+            }
+            sysbus.WriteBytes(bytes, address);
+        }
+
+        private const ulong DataRamStart = 0x20000000;
+        private const ulong DataRamEnd = 0x20040000;
+
         private void StoreResult(short result)
         {
             if(!bufferActive)
@@ -359,7 +373,7 @@ namespace Antmicro.Renode.Peripherals.Analog
             }
 
             var address = bufferPointer + 2UL * resultAmount;
-            sysbus.WriteWord(address, unchecked((ushort)result));
+            WriteDataRam(BitConverter.GetBytes(result), address);
             resultAmount++;
             SetEvent(Event.ResultDone);
 
