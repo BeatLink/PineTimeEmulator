@@ -29,8 +29,8 @@ include $root/peripherals/PineTime_BMA42x.cs
 include $root/peripherals/PineTime_HRS3300.cs
 include $root/peripherals/PineTime_Battery.cs
 
-# A short quantum keeps tasks that PPI triggers close to their real timing.
-emulation SetGlobalQuantum "0.00002"
+# A 1 ms quantum keeps an idle watch faster than real time; the Bluetooth bridge sets a shorter one.
+emulation SetGlobalQuantum "0.001"
 
 mach create $name
 machine LoadPlatformDescription $root/platform/pinetime.repl

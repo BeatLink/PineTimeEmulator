@@ -90,7 +90,8 @@ mistake, such as through a NULL buffer, is ignored as on a watch instead of wipi
 - Radio whitening, collisions, Coded PHY and transmit power: frames either arrive whole or not at all.
 - Timing of the CPU itself: instructions take no time beyond the clock, so speed-sensitive code
   runs faster or slower than on a watch.
-- PPI tasks run at the next time quantum, 20 µs at most, rather than at once.
+- PPI tasks run at the next time quantum, 1 ms at most (10 µs with the Bluetooth bridge), rather
+  than at once.
 - NVMC write timing.
 - MWU memory watching, QDEC counting and COMP/LPCOMP analog levels.
 - The external flash sits at 0x60000000 on the system bus so tests can read it; real firmware never
