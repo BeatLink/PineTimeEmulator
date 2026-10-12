@@ -29,6 +29,9 @@ pinetime-test SUITE.robot              # Robot suites, as renode-test ran them
 as `sysbus LoadELF @image.elf`, `emulation RunFor "3"` and `sysbus.serial0.spiBus.lcd
 SaveScreenshot @screen.png`; see [docs/hardware.md](docs/hardware.md).
 
+Firmware images for suites to start from: `.#infinitime-app` (InfiniTime 1.16.1), `.#infinitime-mcuboot`
+and `.#infinitime-bootloader` (InfiniTime's bootloader 5.0.4, laid out as in an InfiniTime checkout).
+
 ## Layout
 
 ```text

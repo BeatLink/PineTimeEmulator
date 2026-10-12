@@ -31,6 +31,11 @@
       {
         packages = {
           inherit (infinitime_packages) infinitime-app infinitime-mcuboot;
+          # InfiniTime's bootloader release, laid out as in an InfiniTime checkout, for suites that start from it.
+          infinitime-bootloader = pkgs.runCommand "infinitime-bootloader-5.0.4" { } ''
+            mkdir -p $out/bootloader
+            cp ${infinitime}/bootloader/bootloader-5.0.4.bin $out/bootloader/
+          '';
           pinetime-emulator = pinetime_emulator;
           pinetime-engine = pinetime_engine;
           pinetime-test = pinetime_test;
