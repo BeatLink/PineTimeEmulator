@@ -190,6 +190,25 @@ impl Nrf52832 {
         }
     }
 
+    /// The wait states fetching the instruction word at `address` costs: flash makes the CPU wait
+    /// unless the cache holds the word, and RAM never does.
+    #[inline]
+    pub fn fetch_wait_cycles(&mut self, address: u32) -> u32 {
+        match self.memory.locate(address, 4) {
+            Some((Region::Flash, _)) => self.peripherals.nvmc.fetch_wait_cycles(address),
+            _ => 0,
+        }
+    }
+
+    /// The wait states a data access at `address` costs: only flash makes the CPU wait.
+    #[inline]
+    pub fn data_wait_cycles(&self, address: u32) -> u32 {
+        match self.memory.locate(address, 1) {
+            Some((Region::Flash, _)) => self.peripherals.nvmc.data_wait_cycles(),
+            _ => 0,
+        }
+    }
+
     fn is_peripheral(address: u32) -> bool {
         (PERIPHERAL_START..GPIO_END).contains(&address)
     }

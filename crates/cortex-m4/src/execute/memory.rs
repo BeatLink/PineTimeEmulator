@@ -52,6 +52,7 @@ impl CortexM4 {
             }
             return Ok(self.read_private_bus(address, size));
         }
+        self.data_wait_cycles += bus.data_wait_cycles(address);
         bus.read(address, size)
             .map_err(|_| Trap::Fault(Fault::DataBus(address)))
     }
@@ -71,6 +72,7 @@ impl CortexM4 {
             self.write_private_bus(address, value, size);
             return Ok(());
         }
+        self.data_wait_cycles += bus.data_wait_cycles(address);
         bus.write(address, value & size.mask(), size)
             .map_err(|_| Trap::Fault(Fault::DataBus(address)))
     }

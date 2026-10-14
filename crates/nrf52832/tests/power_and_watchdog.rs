@@ -12,6 +12,9 @@ const RESETREAS: u32 = 0x4000_0400;
 const WDT: u32 = 0x4001_0000;
 const NVMC_CONFIG: u32 = 0x4001_E504;
 const NVMC_ERASEPAGE: u32 = 0x4001_E508;
+const NVMC_ICACHECNF: u32 = 0x4001_E540;
+const NVMC_IHIT: u32 = 0x4001_E548;
+const NVMC_IMISS: u32 = 0x4001_E54C;
 const RELOAD_MAGIC: u32 = 0x6E52_4635;
 
 fn reset(harness: &mut Harness, kind: ResetKind) {
@@ -274,4 +277,48 @@ fn starts_with_erased_flash_and_the_pinetime_ficr() {
     // The CPU cannot write the FICR.
     harness.write(0x1000_0010, 0);
     assert_eq!(harness.read(0x1000_0010), 0x1000);
+}
+
+// ============================================================================
+// Flash wait states and the instruction cache
+// ============================================================================
+
+#[test]
+fn flash_makes_the_cpu_wait_and_ram_does_not() {
+    let mut harness = Harness::new();
+    assert_eq!(harness.chip.fetch_wait_cycles(0x100), 2);
+    assert_eq!(harness.chip.data_wait_cycles(0x100), 2);
+    assert_eq!(harness.chip.fetch_wait_cycles(0x2000_0100), 0);
+    assert_eq!(harness.chip.data_wait_cycles(0x2000_0100), 0);
+    assert_eq!(harness.chip.data_wait_cycles(0x4000_0000), 0);
+}
+
+#[test]
+fn the_cache_saves_fetch_waits_and_counts_hits_and_misses() {
+    let mut harness = Harness::new();
+    harness.write(NVMC_ICACHECNF, 0x101);
+    assert_eq!(harness.read(NVMC_ICACHECNF), 0x101);
+    assert_eq!(harness.chip.fetch_wait_cycles(0x100), 3);
+    assert_eq!(harness.chip.fetch_wait_cycles(0x104), 0);
+    assert_eq!((harness.read(NVMC_IHIT), harness.read(NVMC_IMISS)), (1, 1));
+    // Data reads go round the cache.
+    assert_eq!(harness.chip.data_wait_cycles(0x100), 2);
+    harness.write(NVMC_IHIT, 0);
+    harness.write(NVMC_IMISS, 0);
+    assert_eq!((harness.read(NVMC_IHIT), harness.read(NVMC_IMISS)), (0, 0));
+}
+
+#[test]
+fn writing_flash_or_turning_the_cache_off_empties_it() {
+    let mut harness = Harness::new();
+    harness.write(NVMC_ICACHECNF, 1);
+    harness.chip.fetch_wait_cycles(0x100);
+    assert_eq!(harness.chip.fetch_wait_cycles(0x100), 0);
+    harness.write(NVMC_CONFIG, 1);
+    assert_eq!(harness.chip.fetch_wait_cycles(0x100), 2);
+    harness.write(NVMC_CONFIG, 0);
+    assert_eq!(harness.chip.fetch_wait_cycles(0x100), 3);
+    harness.write(NVMC_ICACHECNF, 0);
+    harness.write(NVMC_ICACHECNF, 1);
+    assert_eq!(harness.chip.fetch_wait_cycles(0x100), 3);
 }

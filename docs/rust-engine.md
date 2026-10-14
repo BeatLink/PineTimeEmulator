@@ -25,7 +25,17 @@ Time is counted in cycles of the 64 MHz CPU clock (`core::time`). Every alarm is
 `Scheduler`, named by an `EventKey` of owner and token; scheduling a queued key moves it. The
 machine runs the CPU until the next event is due, then hands each due event to its owner. A
 sleeping CPU (WFI, or WFE with no event pending) skips straight to the next event, so an idle
-watch costs almost nothing. Instructions cost the cycles InfiniEmu's CPU reports.
+watch costs almost nothing. Instructions cost the cycles InfiniEmu's CPU reports, plus the wait
+states memory adds through `Bus::fetch_wait_cycles` and `Bus::data_wait_cycles`. The CPU pays
+the fetch wait once for each 32-bit word it reaches, so straight-line code of 16-bit instructions
+pays it every second instruction and a branch pays it again at its target.
+
+On the nRF52832, flash holds the CPU for 2 cycles a fetch or data access with the instruction
+cache off, as it is after reset (PS v1.4, CPU: WFLASH). With `NVMC.ICACHECNF` on, a fetch that
+hits the 2 KB cache costs nothing and a miss costs 3 (WFLASHCACHE); data in flash still costs 2.
+Nordic gives neither the cache's layout nor its line size, so it is modelled as direct-mapped with
+16-byte lines, and `IHIT` and `IMISS` count as on the chip while profiling is on. RAM and
+peripherals add no wait states.
 
 The machine paces emulated time against the wall clock when a window is attached, and runs flat
 out for tests.

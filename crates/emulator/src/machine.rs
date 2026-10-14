@@ -427,6 +427,16 @@ impl<B: BoardPorts> Bus for MachineBus<'_, B> {
     }
 
     #[inline]
+    fn fetch_wait_cycles(&mut self, address: u32) -> u32 {
+        self.chip.fetch_wait_cycles(address)
+    }
+
+    #[inline]
+    fn data_wait_cycles(&mut self, address: u32) -> u32 {
+        self.chip.data_wait_cycles(address)
+    }
+
+    #[inline]
     fn advance(&mut self, cycles: u32) {
         self.now += cycles as Cycle;
     }

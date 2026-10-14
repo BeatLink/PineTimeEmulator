@@ -47,6 +47,16 @@ pub trait Bus {
         self.read(address, AccessSize::Halfword).map(|value| value as u16)
     }
 
+    /// Extra cycles the memory holds the CPU for while it fetches the instruction word at `address`.
+    fn fetch_wait_cycles(&mut self, _address: u32) -> u32 {
+        0
+    }
+
+    /// Extra cycles the memory holds the CPU for during a data access at `address`.
+    fn data_wait_cycles(&mut self, _address: u32) -> u32 {
+        0
+    }
+
     /// Moves emulated time on by the cycles the last instruction took; the CPU calls it after
     /// every instruction, before `interrupt_lines`, so peripherals read the right time.
     fn advance(&mut self, cycles: u32);

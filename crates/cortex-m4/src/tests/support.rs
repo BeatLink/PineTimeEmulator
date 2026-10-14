@@ -26,6 +26,10 @@ pub struct TestBus {
     pub advanced_cycles: u64,
     /// `stop_requested` turns true once `advanced_cycles` reaches this.
     pub stop_at_cycle: Option<u64>,
+    /// Wait states each instruction word fetched from flash costs.
+    pub flash_fetch_wait: u32,
+    /// Wait states each data access to flash costs.
+    pub flash_data_wait: u32,
 }
 
 impl TestBus {
@@ -37,6 +41,8 @@ impl TestBus {
             lines_changed: false,
             advanced_cycles: 0,
             stop_at_cycle: None,
+            flash_fetch_wait: 0,
+            flash_data_wait: 0,
         }
     }
 
@@ -102,6 +108,20 @@ impl Bus for TestBus {
             return Ok(u16::from_le_bytes([self.ram[offset], self.ram[offset + 1]]));
         }
         Err(BusError::Unmapped)
+    }
+
+    fn fetch_wait_cycles(&mut self, address: u32) -> u32 {
+        match (address as usize) < FLASH_SIZE {
+            true => self.flash_fetch_wait,
+            false => 0,
+        }
+    }
+
+    fn data_wait_cycles(&mut self, address: u32) -> u32 {
+        match (address as usize) < FLASH_SIZE {
+            true => self.flash_data_wait,
+            false => 0,
+        }
     }
 
     fn advance(&mut self, cycles: u32) {

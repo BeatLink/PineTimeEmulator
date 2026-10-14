@@ -135,3 +135,37 @@ fn rewritten_code_in_ram_is_decoded_again() {
     assert_eq!(machine.register(2), 1);
     assert_eq!(machine.register(0), 7);
 }
+
+// ============================================================================
+// Wait states
+// ============================================================================
+
+/// The cycles a snippet takes to reach its breakpoint with these flash wait states.
+fn cycles_with_waits(body: &str, fetch_wait: u32, data_wait: u32) -> u64 {
+    let mut machine = Machine::new(body);
+    machine.bus.flash_fetch_wait = fetch_wait;
+    machine.bus.flash_data_wait = data_wait;
+    machine.run_to_breakpoint();
+    machine.cpu.cycles()
+}
+
+#[test]
+fn straight_line_code_waits_once_for_each_word_it_fetches() {
+    let short = format!("{} bkpt #0", "nop\n ".repeat(8));
+    let long = format!("{} bkpt #0", "nop\n ".repeat(16));
+    let waits = |body: &str| cycles_with_waits(body, 2, 0) - cycles_with_waits(body, 0, 0);
+    // Eight more 16-bit instructions are four more words, two wait states each.
+    assert_eq!(waits(&long) - waits(&short), 8);
+}
+
+#[test]
+fn data_in_flash_waits_on_every_access_and_ram_never_does() {
+    let reads = |from: &str| {
+        format!("ldr r0, ={from}\n ldr r1, [r0]\n ldr r1, [r0]\n ldr r1, [r0]\n ldr r1, [r0]\n bkpt #0")
+    };
+    let waits = |body: &str| cycles_with_waits(body, 0, 3) - cycles_with_waits(body, 0, 0);
+    // The assembler makes the small flash address a move, but loads the RAM one from the literal
+    // pool in flash, which waits once.
+    assert_eq!(waits(&reads("0x100")), 4 * 3);
+    assert_eq!(waits(&reads("0x20000100")), 3);
+}

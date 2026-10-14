@@ -92,6 +92,10 @@ pub struct CortexM4 {
     /// Cycles executed since the core was created; SysTick and the DWT count these.
     pub(crate) cycles: u64,
     executed_instructions: u64,
+    /// The instruction word fetched last, so straight-line code pays for each word only once.
+    last_fetched_word: u32,
+    /// Cycles the memory held data accesses for during the instruction being executed.
+    pub(crate) data_wait_cycles: u32,
     pub(crate) system_reset_requested: bool,
     breakpoints: Vec<u32>,
     /// The address `run` stopped at for a breakpoint, which it steps past when resumed.
@@ -135,6 +139,8 @@ impl CortexM4 {
             locked_up: false,
             cycles: 0,
             executed_instructions: 0,
+            last_fetched_word: u32::MAX,
+            data_wait_cycles: 0,
             system_reset_requested: false,
             breakpoints: Vec::new(),
             resume_breakpoint: None,
@@ -295,20 +301,22 @@ impl CortexM4 {
         self.registers[PROGRAM_COUNTER] = address.wrapping_add(4);
         self.pc = address.wrapping_add(length as u32);
         self.executed_instructions += 1;
+        let fetch_wait = self.fetch_wait(bus, address, length as u32);
 
         if condition < 14 && !self.flags.condition_passed(condition) {
             if in_it_block {
                 self.advance_it_state();
             }
-            return self.account(1, None);
+            return self.account(1 + fetch_wait, None);
         }
 
+        self.data_wait_cycles = 0;
         match self.execute(bus, instruction) {
             Ok(cycles) => {
                 if in_it_block {
                     self.advance_it_state();
                 }
-                self.account(cycles, None)
+                self.account(cycles + fetch_wait + self.data_wait_cycles, None)
             }
             Err(trap) => self.handle_trap(bus, trap, address, in_it_block, resuming),
         }
@@ -397,6 +405,23 @@ impl CortexM4 {
                 (0, Some(StopReason::Breakpoint))
             }
         }
+    }
+
+    /// The cycles the memory holds the CPU for to fetch an instruction, counting each word once
+    /// while code runs straight on, as the core's prefetch reads whole words.
+    #[inline(always)]
+    fn fetch_wait<B: Bus>(&mut self, bus: &mut B, address: u32, length: u32) -> u32 {
+        let first = address & !3;
+        let last = address.wrapping_add(length - 1) & !3;
+        let mut wait = 0;
+        if first != self.last_fetched_word {
+            wait += bus.fetch_wait_cycles(first);
+        }
+        if last != first {
+            wait += bus.fetch_wait_cycles(last);
+        }
+        self.last_fetched_word = last;
+        wait
     }
 
     /// Counts `cycles` as executed and fires SysTick if it reached zero.

@@ -36,7 +36,7 @@ emulated second.
 | 0x40013000 | COMP and LPCOMP | Registers only |
 | 0x40014000.. | EGU0..5 | |
 | 0x4001C000, 0x40021000, 0x40022000 | PWM0..2 | Sequences in emulated time |
-| 0x4001E000 | NVMC | Page, UICR and full erase |
+| 0x4001E000 | NVMC | Page, UICR and full erase; flash wait states and the 2 KB instruction cache with its hit and miss counters, see [rust-engine.md](rust-engine.md#time) |
 | 0x4001F000 | PPI | Tasks run at once, including the fixed channels 20..31 |
 | 0x40020000 | MWU | Registers only |
 | 0x50000000 | GPIO | Real pin levels: drive, pulls, open drain, SENSE and LATCH |
