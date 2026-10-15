@@ -1,0 +1,26 @@
+#!/bin/sh
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Starts the watch window from inside the AppImage, or the bare engine when the first argument is "engine".
+
+here="$(dirname "$(readlink -f "$0")")"
+parts="$here/usr/lib/pinetime-emulator"
+
+export PINETIME_EMULATOR_ENGINE="${PINETIME_EMULATOR_ENGINE:-$parts/pinetime-engine}"
+export PINETIME_EMULATOR_INFINITIME="${PINETIME_EMULATOR_INFINITIME:-$parts/infinitime/pinetime-app-@infinitime_version@.out}"
+export PINETIME_EMULATOR_HCI_CONTROLLER="${PINETIME_EMULATOR_HCI_CONTROLLER:-$parts/nrf52840-hci-uart.elf}"
+export PINETIME_EMULATOR_FONT="${PINETIME_EMULATOR_FONT:-$parts/DejaVuSansMono.ttf}"
+export SSL_CERT_FILE="$here/opt/_internal/certs.pem"
+export PYSDL2_DLL_PATH="$here/opt/python@python_version@/lib/python@python_version@/site-packages/sdl2dll/dll"
+unset PYTHONHOME PYTHONPATH
+
+if [ "$1" = "engine" ]; then
+    shift
+    exec "$PINETIME_EMULATOR_ENGINE" "$@"
+fi
+
+# Opened from a desktop menu with no arguments, it runs the InfiniTime it carries.
+if [ $# -eq 0 ]; then
+    set -- --infinitime
+fi
+
+exec "$here/opt/python@python_version@/bin/python@python_version@" -s -m pinetime_emulator "$@"

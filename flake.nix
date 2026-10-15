@@ -5,6 +5,12 @@
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
     flake-utils.url = "github:numtide/flake-utils";
+    # The AppImage runtime, built from source.
+    nix-appimage = {
+      url = "github:ralismark/nix-appimage";
+      inputs.nixpkgs.follows = "nixpkgs";
+      inputs.flake-utils.follows = "flake-utils";
+    };
     # InfiniTime release the firmware packages build, with its lvgl, littlefs and arduinoFFT submodules.
     infinitime = {
       url = "git+https://github.com/InfiniTimeOrg/InfiniTime?ref=refs/tags/1.16.1&submodules=1";
@@ -12,7 +18,7 @@
     };
   };
 
-  outputs = { self, nixpkgs, flake-utils, infinitime }:
+  outputs = { self, nixpkgs, flake-utils, nix-appimage, infinitime }:
     flake-utils.lib.eachSystem [ "x86_64-linux" "aarch64-linux" ] (system:
       let
         pkgs = import nixpkgs { inherit system; };
@@ -27,6 +33,11 @@
           inherit pkgs pinetime_engine hci_controller;
           infinitime_app = infinitime_packages.infinitime-app;
         };
+        pinetime_emulator_appimage = import ./nix/appimage.nix {
+          inherit pkgs hci_controller;
+          infinitime_app = infinitime_packages.infinitime-app;
+          appimage_runtime = nix-appimage.packages.${system}.appimage-runtimes.appimage-type2-runtime;
+        };
       in
       {
         packages = {
@@ -39,6 +50,8 @@
           pinetime-emulator = pinetime_emulator;
           pinetime-engine = pinetime_engine;
           pinetime-test = pinetime_test;
+          # `nix build .#appimage` makes PineTime_Emulator-<architecture>.AppImage for systems without Nix.
+          appimage = pinetime_emulator_appimage;
           default = pinetime_emulator;
         };
 

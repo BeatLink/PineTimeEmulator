@@ -8,6 +8,29 @@ comes from.
 It is written for Linux on x86_64 or aarch64, the systems the flake supports. Other systems are
 untested.
 
+## The AppImage
+
+To run the watch window without building anything, take `PineTime_Emulator-x86_64.AppImage` or
+`PineTime_Emulator-aarch64.AppImage` from the
+[releases](https://github.com/BeatLink/PineTimeEmulator/releases). It carries Python, SDL2, the
+engine, InfiniTime 1.16.1, the Bluetooth controller and a font, and needs glibc 2.28 or newer
+(Debian 10, Ubuntu 20.04, Fedora 29 and later) and FUSE, as every AppImage does.
+
+```sh
+chmod +x PineTime_Emulator-x86_64.AppImage
+./PineTime_Emulator-x86_64.AppImage                     # InfiniTime, the same as --infinitime
+./PineTime_Emulator-x86_64.AppImage --image FILE        # any other firmware; the options are the ones below
+./PineTime_Emulator-x86_64.AppImage --infinitime --bluetooth
+./PineTime_Emulator-x86_64.AppImage engine              # pinetime-engine, the monitor on standard input
+```
+
+Without FUSE, add `--appimage-extract-and-run`. `--bluetooth` still needs BlueZ's `btattach` on
+the computer, as [below](#bluetooth). `nix build .#appimage` builds the same file; the AppImage
+workflow builds both and attaches them to a release when a `v` tag is pushed.
+
+For tests, the Robot suites and your own changes, build from source as the rest of this page
+describes.
+
 ## What you need
 
 | For | Needs |

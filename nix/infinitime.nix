@@ -87,6 +87,16 @@ let
     '';
   };
 
+  # The ELFs' debug info names the toolchain, SDK and source, which would otherwise keep the 1 GB toolchain in the run-time closure.
+  without_build_references = {
+    nativeBuildInputs = [ pkgs.removeReferencesTo ];
+    allowedReferences = [ ];
+  };
+  remove_build_references = ''
+    find $out -type f -exec remove-references-to \
+      -t ${pkgs.gcc-arm-embedded-13} -t ${nrf5_sdk} -t ${infinitime_source} {} +
+  '';
+
 in
 {
   # ==========================================================================
@@ -94,7 +104,7 @@ in
   # ==========================================================================
 
   # The app linked at 0x0 with no bootloader, as InfiniEmu runs it.
-  infinitime-app = pkgs.runCommand "infinitime-app-${version}" { } ''
+  infinitime-app = pkgs.runCommand "infinitime-app-${version}" without_build_references ''
     mkdir -p $out
     cp ${infinitime_build}/pinetime-app-${version}.{out,hex,bin,map} $out/
     cp ${infinitime_build}/infinitime-resources-${version}.zip $out/
@@ -105,10 +115,11 @@ in
     pinetime-app-${version}.out   ELF, loads at its own addresses
     infinitime-resources-${version}.zip   files for the littlefs on SPI flash, not flash images
     EOF
+    ${remove_build_references}
   '';
 
   # The MCUboot bootloader plus the app image it boots from slot 0.
-  infinitime-mcuboot = pkgs.runCommand "infinitime-mcuboot-${version}" { } ''
+  infinitime-mcuboot = pkgs.runCommand "infinitime-mcuboot-${version}" without_build_references ''
     mkdir -p $out
     cp ${bootloader_hex} $out/bootloader-${bootloader_version}.hex
     cp ${infinitime_build}/pinetime-mcuboot-app-image-${version}.{bin,hex} $out/
@@ -122,5 +133,6 @@ in
     pinetime-mcuboot-app-${version}.out   ELF of the app alone, for symbols; linked at 0x00008020
     The bootloader draws its boot logo from SPI flash 0x0; with an erased SPI flash it shows garbage.
     EOF
+    ${remove_build_references}
   '';
 }

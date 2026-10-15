@@ -29,7 +29,8 @@ pinetime-test SUITE.robot              # Robot suites, as renode-test ran them
 as `sysbus LoadELF @image.elf`, `emulation RunFor "3"` and `sysbus.serial0.spiBus.lcd
 SaveScreenshot @screen.png`; see [docs/hardware.md](docs/hardware.md).
 
-Without Nix, [docs/install.md](docs/install.md) lists every dependency and the steps to build and run.
+Without Nix, run the AppImage from the [releases](https://github.com/BeatLink/PineTimeEmulator/releases),
+or build from source; [docs/install.md](docs/install.md) covers both and lists every dependency.
 
 Firmware images for suites to start from: `.#infinitime-app` (InfiniTime 1.16.1), `.#infinitime-mcuboot`
 and `.#infinitime-bootloader` (InfiniTime's bootloader 5.0.4, laid out as in an InfiniTime checkout).
