@@ -1,0 +1,86 @@
+[
+    {
+        "type": "archive",
+        "archive-type": "tar-gzip",
+        "url": "https://static.crates.io/crates/capstone/capstone-0.13.0.crate",
+        "sha256": "015ef5d5ca1743e3f94af9509ba6bd2886523cfee46e48d15c2ef5216fd4ac9a",
+        "dest": "cargo/vendor/capstone-0.13.0"
+    },
+    {
+        "type": "inline",
+        "contents": "{\"package\": \"015ef5d5ca1743e3f94af9509ba6bd2886523cfee46e48d15c2ef5216fd4ac9a\", \"files\": {}}",
+        "dest": "cargo/vendor/capstone-0.13.0",
+        "dest-filename": ".cargo-checksum.json"
+    },
+    {
+        "type": "archive",
+        "archive-type": "tar-gzip",
+        "url": "https://static.crates.io/crates/capstone-sys/capstone-sys-0.17.0.crate",
+        "sha256": "2267cb8d16a1e4197863ec4284ffd1aec26fe7e57c58af46b02590a0235809a0",
+        "dest": "cargo/vendor/capstone-sys-0.17.0"
+    },
+    {
+        "type": "inline",
+        "contents": "{\"package\": \"2267cb8d16a1e4197863ec4284ffd1aec26fe7e57c58af46b02590a0235809a0\", \"files\": {}}",
+        "dest": "cargo/vendor/capstone-sys-0.17.0",
+        "dest-filename": ".cargo-checksum.json"
+    },
+    {
+        "type": "archive",
+        "archive-type": "tar-gzip",
+        "url": "https://static.crates.io/crates/cc/cc-1.8.0.crate",
+        "sha256": "6651c9ed80effdc7db0ff72512157f901af5e3549e341e24b1dd4887d836d838",
+        "dest": "cargo/vendor/cc-1.8.0"
+    },
+    {
+        "type": "inline",
+        "contents": "{\"package\": \"6651c9ed80effdc7db0ff72512157f901af5e3549e341e24b1dd4887d836d838\", \"files\": {}}",
+        "dest": "cargo/vendor/cc-1.8.0",
+        "dest-filename": ".cargo-checksum.json"
+    },
+    {
+        "type": "archive",
+        "archive-type": "tar-gzip",
+        "url": "https://static.crates.io/crates/find-msvc-tools/find-msvc-tools-0.1.14.crate",
+        "sha256": "aedcfb3409746eddb02b9e19ebda1c3394f759a152e48ee875a0844d1b955484",
+        "dest": "cargo/vendor/find-msvc-tools-0.1.14"
+    },
+    {
+        "type": "inline",
+        "contents": "{\"package\": \"aedcfb3409746eddb02b9e19ebda1c3394f759a152e48ee875a0844d1b955484\", \"files\": {}}",
+        "dest": "cargo/vendor/find-msvc-tools-0.1.14",
+        "dest-filename": ".cargo-checksum.json"
+    },
+    {
+        "type": "archive",
+        "archive-type": "tar-gzip",
+        "url": "https://static.crates.io/crates/libc/libc-0.2.190.crate",
+        "sha256": "ce5d3ddc6d3fa000eb1536d85e147bfe31aacaba692ed6a876f95cb7c855be78",
+        "dest": "cargo/vendor/libc-0.2.190"
+    },
+    {
+        "type": "inline",
+        "contents": "{\"package\": \"ce5d3ddc6d3fa000eb1536d85e147bfe31aacaba692ed6a876f95cb7c855be78\", \"files\": {}}",
+        "dest": "cargo/vendor/libc-0.2.190",
+        "dest-filename": ".cargo-checksum.json"
+    },
+    {
+        "type": "archive",
+        "archive-type": "tar-gzip",
+        "url": "https://static.crates.io/crates/shlex/shlex-2.0.1.crate",
+        "sha256": "f8fadd59c855ef2080decdef8ff161eb6661b86933c9d82e5ba29dc602a55aba",
+        "dest": "cargo/vendor/shlex-2.0.1"
+    },
+    {
+        "type": "inline",
+        "contents": "{\"package\": \"f8fadd59c855ef2080decdef8ff161eb6661b86933c9d82e5ba29dc602a55aba\", \"files\": {}}",
+        "dest": "cargo/vendor/shlex-2.0.1",
+        "dest-filename": ".cargo-checksum.json"
+    },
+    {
+        "type": "inline",
+        "contents": "[source.vendored-sources]\ndirectory = \"cargo/vendor\"\n\n[source.crates-io]\nreplace-with = \"vendored-sources\"\n",
+        "dest": "cargo",
+        "dest-filename": "config"
+    }
+]

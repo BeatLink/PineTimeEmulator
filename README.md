@@ -29,8 +29,8 @@ pinetime-test SUITE.robot              # Robot suites, as renode-test ran them
 as `sysbus LoadELF @image.elf`, `emulation RunFor "3"` and `sysbus.serial0.spiBus.lcd
 SaveScreenshot @screen.png`; see [docs/hardware.md](docs/hardware.md).
 
-Without Nix, run the AppImage from the [releases](https://github.com/BeatLink/PineTimeEmulator/releases),
-or build from source; [docs/install.md](docs/install.md) covers both and lists every dependency.
+Without Nix, run the AppImage or the Flatpak from the
+[releases](https://github.com/BeatLink/PineTimeEmulator/releases), or build from source; [docs/install.md](docs/install.md) covers both and lists every dependency.
 
 Firmware images for suites to start from: `.#infinitime-app` (InfiniTime 1.16.1), `.#infinitime-mcuboot`
 and `.#infinitime-bootloader` (InfiniTime's bootloader 5.0.4, laid out as in an InfiniTime checkout).
@@ -44,7 +44,8 @@ PineTimeEmulator/
 ├── frontend/          the desktop window (Python, SDL2)
 ├── robot/             Robot Framework keywords for pinetime-test
 ├── scripts/           pinetime.resc, the script suites include to build a watch
-├── nix/               package definitions
+├── nix/               package definitions, the AppImage among them
+├── flatpak/           the Flatpak manifest and its launcher
 ├── tools/             hci_scan.py, which checks the Bluetooth bridge without BlueZ
 └── tests/             the window test
 ```

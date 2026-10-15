@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=PineTime Emulator
+Comment=Run PineTime smartwatch firmware in an emulated watch
+Exec=pinetime-emulator
+Icon=io.github.beatlink.PineTimeEmulator
+Categories=Development;Emulator;
+Terminal=false

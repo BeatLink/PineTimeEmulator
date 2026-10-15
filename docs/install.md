@@ -28,6 +28,44 @@ Without FUSE, add `--appimage-extract-and-run`. `--bluetooth` still needs BlueZ'
 the computer, as [below](#bluetooth). `nix build .#appimage` builds the same file; the AppImage
 workflow builds both and attaches them to a release when a `v` tag is pushed.
 
+## The Flatpak
+
+The [releases](https://github.com/BeatLink/PineTimeEmulator/releases) also carry
+`PineTime_Emulator-x86_64.flatpak` and `PineTime_Emulator-aarch64.flatpak`. They run on
+Flathub's Freedesktop 26.08 runtime, which `flatpak` fetches on install, and carry InfiniTime 1.16.1
+as released, behind its MCUboot bootloader, so its logo shows for about 20 seconds first.
+
+```sh
+flatpak install --user PineTime_Emulator-x86_64.flatpak
+flatpak run io.github.beatlink.PineTimeEmulator                          # InfiniTime
+flatpak run io.github.beatlink.PineTimeEmulator --image ~/firmware.elf   # firmware anywhere in your home folder
+flatpak run io.github.beatlink.PineTimeEmulator engine                   # pinetime-engine
+```
+
+The app sees only your home folder, so firmware and screenshots live there. `--bluetooth` needs
+the computer's own terminals, which the sandbox hides: run it with
+`flatpak run --device=all io.github.beatlink.PineTimeEmulator --infinitime --bluetooth`, or allow
+it once with `flatpak override --user --device=all io.github.beatlink.PineTimeEmulator`. The
+terminal link then appears under `$XDG_RUNTIME_DIR/pinetime-emulator/` for `btattach`.
+
+The manifest is `flatpak/io.github.beatlink.PineTimeEmulator.yml`, and the Flatpak workflow builds
+both bundles for tagged releases. Locally:
+
+```sh
+flatpak-builder --user --install-deps-from=flathub --force-clean --install flatpak-build \
+    flatpak/io.github.beatlink.PineTimeEmulator.yml
+```
+
+The build is offline, so `flatpak/cargo-sources.json` lists every crate. Regenerate it with
+[flatpak-cargo-generator](https://github.com/flatpak/flatpak-builder-tools/tree/master/cargo)
+whenever `Cargo.lock` changes:
+
+```sh
+python3 flatpak-cargo-generator.py Cargo.lock -o flatpak/cargo-sources.json
+```
+
+## Building from source
+
 For tests, the Robot suites and your own changes, build from source as the rest of this page
 describes.
 
@@ -108,6 +146,7 @@ export PINETIME_EMULATOR_ENGINE="$PWD/target/release/pinetime-engine"
 | `PINETIME_EMULATOR_INFINITIME` | the InfiniTime ELF that `--infinitime` loads | `--infinitime` refuses to start; use `--image` |
 | `PINETIME_EMULATOR_HCI_CONTROLLER` | the Bluetooth controller firmware | `--bluetooth` refuses to start |
 | `PINETIME_EMULATOR_FONT` | a TrueType font for the window's labels | `fc-match "DejaVu Sans Mono"`; with no font the labels are left out |
+| `PINETIME_EMULATOR_RUNTIME_DIR` | the folder for each run's shared frame and Bluetooth link | `$XDG_RUNTIME_DIR`, then `/dev/shm` |
 | `PYSDL2_DLL_PATH` | one folder holding `libSDL2` and `libSDL2_ttf` | the system's library path, which is right on most distributions |
 
 If SDL2 is not packaged for you, `.venv/bin/pip install pysdl2-dll` brings PyPI's own copies of

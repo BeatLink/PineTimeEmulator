@@ -53,7 +53,9 @@ def collect_images(arguments, parser):
 
 
 def runtime_parent():
-    for candidate in (os.environ.get("XDG_RUNTIME_DIR"), "/dev/shm"):
+    """The folder for the run's shared frame and Bluetooth link; a sandbox names one the host can see."""
+    candidates = (os.environ.get("PINETIME_EMULATOR_RUNTIME_DIR"), os.environ.get("XDG_RUNTIME_DIR"), "/dev/shm")
+    for candidate in candidates:
         if candidate and os.path.isdir(candidate) and os.access(candidate, os.W_OK):
             return candidate
     return None

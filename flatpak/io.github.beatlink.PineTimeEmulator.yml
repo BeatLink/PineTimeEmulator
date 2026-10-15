@@ -1,0 +1,109 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# The Flatpak of the watch window; regenerate cargo-sources.json whenever Cargo.lock changes (see docs/install.md).
+app-id: io.github.beatlink.PineTimeEmulator
+runtime: org.freedesktop.Platform
+runtime-version: "26.08"
+sdk: org.freedesktop.Sdk
+sdk-extensions:
+  - org.freedesktop.Sdk.Extension.rust-stable
+command: pinetime-emulator
+
+finish-args:
+  - --socket=wayland
+  - --socket=fallback-x11
+  - --share=ipc
+  - --device=dri
+  # Firmware images and flash images are opened from anywhere in the home folder, and screenshots saved there.
+  - --filesystem=home
+  # The Bluetooth controller's terminal link lives here, where the computer's btattach can reach it.
+  - --filesystem=xdg-run/pinetime-emulator:create
+
+modules:
+  # ==========================================================================
+  # SDL2_ttf, which the runtime leaves out, for the window's labels
+  # ==========================================================================
+
+  - name: SDL2_ttf
+    buildsystem: cmake-ninja
+    builddir: true
+    config-opts:
+      - -DCMAKE_BUILD_TYPE=Release
+      - -DSDL2TTF_SAMPLES=OFF
+      - -DSDL2TTF_VENDORED=OFF
+      - -DSDL2TTF_HARFBUZZ=ON
+    cleanup:
+      - /include
+      - /lib/cmake
+      - /lib/pkgconfig
+    sources:
+      - type: archive
+        url: https://github.com/libsdl-org/SDL_ttf/releases/download/release-2.24.0/SDL2_ttf-2.24.0.tar.gz
+        sha256: 0b2bf1e7b6568adbdbc9bb924643f79d9dedafe061fa1ed687d1d9ac4e453bfd
+
+  # ==========================================================================
+  # The engine
+  # ==========================================================================
+
+  - name: pinetime-engine
+    buildsystem: simple
+    build-options:
+      append-path: /usr/lib/sdk/rust-stable/bin
+      env:
+        CARGO_HOME: /run/build/pinetime-engine/cargo
+    build-commands:
+      - cargo --offline build --release -p pinetime-emulator
+      - install -Dm755 target/release/pinetime-engine /app/bin/pinetime-engine
+    sources:
+      - type: dir
+        path: ..
+        skip:
+          - .git
+          - .claude
+          - .flatpak-builder
+          - flatpak-build
+          - frontend
+          - result
+          - target
+      - cargo-sources.json
+
+  # ==========================================================================
+  # The window, its firmware and its launcher
+  # ==========================================================================
+
+  - name: pinetime-emulator
+    buildsystem: simple
+    build-commands:
+      - pip3 install --no-index --no-deps --no-build-isolation --prefix=/app PySDL2-0.9.17-py3-none-any.whl
+      - |
+        site=$(python3 -c 'import sysconfig; print(sysconfig.get_path("purelib", vars={"base": "/app"}))')
+        cp -r frontend/pinetime_emulator "$site/"
+      - install -Dm644 bootloader_infinitime-1.16.1.hex /app/share/pinetime-emulator/bootloader_infinitime-1.16.1.hex
+      - install -Dm644 nrf52840-hci-uart.elf /app/share/pinetime-emulator/nrf52840-hci-uart.elf
+      - install -Dm755 pinetime-emulator.sh /app/bin/pinetime-emulator
+      - install -Dm644 io.github.beatlink.PineTimeEmulator.desktop /app/share/applications/io.github.beatlink.PineTimeEmulator.desktop
+      - install -Dm644 io.github.beatlink.PineTimeEmulator.metainfo.xml /app/share/metainfo/io.github.beatlink.PineTimeEmulator.metainfo.xml
+      - install -Dm644 pinetime-emulator.svg /app/share/icons/hicolor/scalable/apps/io.github.beatlink.PineTimeEmulator.svg
+    sources:
+      - type: dir
+        path: ../frontend
+        dest: frontend
+      - type: file
+        url: https://files.pythonhosted.org/packages/5d/e2/399ea7900e7510096aeb41439e6f1540bef0bdf7e15cc2d8464e4adb71e8/PySDL2-0.9.17-py3-none-any.whl
+        sha256: fe923dbf5c7b27bbc1eb2bf58abfa793f8f13fd7ae8b27b1bc2de49920bcbd41
+      # InfiniTime 1.16.1 with its MCUboot bootloader, as released.
+      - type: file
+        url: https://github.com/InfiniTimeOrg/InfiniTime/releases/download/1.16.1/bootloader_infinitime-1.16.1.hex
+        sha256: 0581fd45a54c7debce1db3a9cda48de3ea7e01261cff57bff19150a238e1c6a2
+      # Zephyr's hci_uart controller for the nRF52840, as Antmicro builds it for Renode; the Bluetooth bridge runs it.
+      - type: file
+        url: https://dl.antmicro.com/projects/renode/nrf52840dk--zephyr-ble_hci_uart.elf-s_2437336-4bf9cccb70ca95fb12667896eec3f777f39f90ee
+        sha256: 642546f3a5347de7649a6068f82a6505bd663bf5b14c7cdc36cf99bb79426f26
+        dest-filename: nrf52840-hci-uart.elf
+      - type: file
+        path: pinetime-emulator.sh
+      - type: file
+        path: io.github.beatlink.PineTimeEmulator.desktop
+      - type: file
+        path: io.github.beatlink.PineTimeEmulator.metainfo.xml
+      - type: file
+        path: ../nix/appimage/pinetime-emulator.svg

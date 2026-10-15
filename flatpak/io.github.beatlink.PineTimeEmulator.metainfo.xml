@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- SPDX-License-Identifier: GPL-3.0-or-later -->
+<component type="desktop-application">
+  <id>io.github.beatlink.PineTimeEmulator</id>
+  <name>PineTime Emulator</name>
+  <summary>Run PineTime smartwatch firmware in an emulated watch</summary>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>GPL-3.0-or-later AND GPL-3.0-only</project_license>
+  <developer id="io.github.beatlink">
+    <name>BeatLink</name>
+  </developer>
+  <description>
+    <p>
+      A full hardware emulator for the PineTime smartwatch. It emulates the Cortex-M4 CPU, the
+      nRF52832 chip and the parts of the watch around it, so the images you would flash on a real
+      watch run unchanged: InfiniTime, wasp-os, BattleTime, the bootloaders and Nordic's SoftDevice.
+    </p>
+    <p>
+      It opens on InfiniTime 1.16.1. Other firmware loads with --image, and --bluetooth puts the
+      emulated watch on the computer's Bluetooth.
+    </p>
+  </description>
+  <launchable type="desktop-id">io.github.beatlink.PineTimeEmulator.desktop</launchable>
+  <url type="homepage">https://github.com/BeatLink/PineTimeEmulator</url>
+  <content_rating type="oars-1.1"/>
+  <releases>
+    <release version="0.1.0" date="2026-10-15"/>
+  </releases>
+</component>
