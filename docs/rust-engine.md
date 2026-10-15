@@ -73,7 +73,7 @@ P0.14, P0.22 and P0.23. Board pull-ups hold P0.05, P0.12, P0.19 and P0.25 high w
 ## Emulator (`emulator`)
 
 - Builds the watch, loads ELF, Intel HEX and raw images, and runs it.
-- Speaks the subset of Renode's monitor language the window, the tools and NeoTime's tests use,
+- Speaks the subset of Renode's monitor language the window, the tools and BattleTime's tests use,
   over a TCP port or standard input, so those callers keep working.
 - Shares the screen and the status block with the window through memory-mapped files (see
   `frontend/pinetime_emulator/shared.py`).
@@ -90,4 +90,4 @@ P0.14, P0.22 and P0.23. Board pull-ups hold P0.05, P0.12, P0.19 and P0.25 high w
 - `sysbus LogAllPeripheralsAccess true` prints every peripheral access with its cycle on standard
   error; `sysbus LogSpiTraffic true` prints every SPI byte and the part it reached.
 - `sysbus AddWatchpointLog ADDRESS DoubleWord Write @FILE` appends `address pc value` to FILE on
-  each write; `pinetime-test` turns NeoTime's Python watchpoint hooks into this.
+  each write; `pinetime-test` turns BattleTime's Python watchpoint hooks into this.

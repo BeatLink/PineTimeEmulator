@@ -3,12 +3,12 @@
 A full hardware emulator for the [PineTime](https://pine64.org/devices/pinetime/) smartwatch,
 written in Rust. It emulates the Cortex-M4 CPU, the nRF52832 chip and the parts of the watch
 around it, so the images you would flash on a real watch run unchanged: InfiniTime, wasp-os,
-NeoTime, the bootloaders and Nordic's SoftDevice. An idle watch runs several times faster than
+BattleTime, the bootloaders and Nordic's SoftDevice. An idle watch runs several times faster than
 real time.
 
 ## Status
 
-InfiniTime 1.16.1 and NeoTime boot to their faces, and NeoTime's bootloader, update, recovery and
+InfiniTime 1.16.1 and BattleTime boot to their faces, and BattleTime's bootloader, update, recovery and
 migration suites pass. See [docs/hardware.md](docs/hardware.md) for what is emulated,
 [docs/rust-engine.md](docs/rust-engine.md) for how the engine is built, and
 [docs/bluetooth.md](docs/bluetooth.md) for reaching the computer's Bluetooth, and

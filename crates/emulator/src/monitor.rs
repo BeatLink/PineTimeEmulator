@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-only
-//! The command language: the subset of Renode's monitor that the window, the tools and NeoTime's
+//! The command language: the subset of Renode's monitor that the window, the tools and BattleTime's
 //! tests send, so they drive this emulator unchanged.
 
 use std::fs;

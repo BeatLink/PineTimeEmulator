@@ -10,7 +10,7 @@ import time
 
 PROMPT = b"(pinetime) "
 
-# Renode watchpoint hooks run Python; the one the NeoTime suites use logs each write to a file.
+# Renode watchpoint hooks run Python; the one the BattleTime suites use logs each write to a file.
 _LOGGING_HOOK = re.compile(
     r"""^sysbus AddWatchpointHook (\S+) (\S+) (\S+) "open\('([^']+)', 'a'\)\.write\('%x %x %x\\\\?n' % \(\S+, self\.GetCurrentCPU\(\)\.PC\.RawValue, value\)\)"$"""
 )
